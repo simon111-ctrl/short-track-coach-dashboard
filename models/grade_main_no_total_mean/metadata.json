@@ -1,0 +1,54 @@
+{
+  "task": "grade_main_no_total_mean",
+  "model": "CatBoost",
+  "label_column": "成绩等级",
+  "class_labels": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "feature_columns": [
+    "第1圈位置",
+    "第1圈成绩",
+    "第2圈位置",
+    "第2圈成绩",
+    "第3圈位置",
+    "第3圈成绩",
+    "第4圈位置",
+    "第4圈成绩",
+    "第5圈位置",
+    "第5圈成绩",
+    "1-2圈速度变化",
+    "2-3圈速度变化",
+    "3-4圈速度变化",
+    "4-5圈速度变化",
+    "1-2圈位置变化",
+    "2-3圈位置变化",
+    "3-4圈位置变化",
+    "4-5圈位置变化",
+    "速度波动",
+    "位置稳定性",
+    "起步速度比例",
+    "冲刺速度比例",
+    "位置改善"
+  ],
+  "filter_column_values": {},
+  "training_rows": 2558,
+  "random_state": 42,
+  "source_data": "C:\\Users\\Administrator\\Desktop\\论文\\博士论文\\[SCI]基于机器学习模型预测短道速滑成绩研究\\sci代码标准文件\\short_track_feature_engineered_25.csv",
+  "source_data_sha256": "36a1c2a9abac22427a0a1a4709086c79aa6bb5511bf520e9407b385f46dde8da",
+  "selected_grouped_metrics": {
+    "accuracy": 0.9210320562939796,
+    "macro_f1": 0.920435464256624,
+    "weighted_f1": 0.920426073424732,
+    "macro_auc": 0.982402233208466,
+    "weighted_auc": 0.9823941112945156,
+    "confusion_matrix": "[[620, 18, 0, 2], [18, 608, 8, 5], [0, 19, 592, 28], [53, 24, 27, 536]]"
+  },
+  "artifacts": {
+    "pickle": "C:\\Users\\Administrator\\Documents\\SCI第一篇\\outputs\\models\\final_candidate\\grade_main_no_total_mean\\CatBoost.pkl",
+    "catboost_native": "C:\\Users\\Administrator\\Documents\\SCI第一篇\\outputs\\models\\final_candidate\\grade_main_no_total_mean\\CatBoost.cbm"
+  },
+  "note": "Model refit on the full corresponding dataset subset after model selection by athlete-grouped validation."
+}
