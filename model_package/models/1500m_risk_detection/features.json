@@ -1,0 +1,17 @@
+[
+  "reconstructed_total_time",
+  "official_total_time_filled",
+  "mean_lap_time",
+  "lap_time_std",
+  "lap_time_cv",
+  "lap_time_range",
+  "lap_time_delta_std",
+  "position_std",
+  "position_range",
+  "position_loss_events_count",
+  "negative_position_loss_sum",
+  "finish_vs_mid_delta",
+  "finish_vs_previous_delta",
+  "final_position",
+  "position_gain_total"
+]

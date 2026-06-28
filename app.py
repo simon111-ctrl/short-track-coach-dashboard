@@ -1,380 +1,330 @@
 from __future__ import annotations
 
-import json
+from io import BytesIO
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from catboost import CatBoostClassifier, Pool
+
+from short_track_service import DISTANCE_LAPS, PredictionService
 
 
 APP_DIR = Path(__file__).resolve().parent
-GRADE_DIR = APP_DIR / "models" / "grade_main_no_total_mean"
-ADV_DIR = APP_DIR / "models" / "advancement_postrace_no_adv"
+PACKAGE_DIR = APP_DIR / "model_package"
 
-
-FRIENDLY_NAMES = {
-    "total_time": "Official total time",
-    "lap1_pos": "Lap 1 position",
-    "lap1_time": "Lap 1 time",
-    "lap2_pos": "Lap 2 position",
-    "lap2_time": "Lap 2 time",
-    "lap3_pos": "Lap 3 position",
-    "lap3_time": "Lap 3 time",
-    "lap4_pos": "Lap 4 position",
-    "lap4_time": "Lap 4 time",
-    "lap5_pos": "Lap 5 position",
-    "lap5_time": "Lap 5 time",
-    "speed_12": "Lap 1-2 speed change",
-    "speed_23": "Lap 2-3 speed change",
-    "speed_34": "Lap 3-4 speed change",
-    "speed_45": "Lap 4-5 speed change",
-    "pos_12": "Lap 1-2 position change",
-    "pos_23": "Lap 2-3 position change",
-    "pos_34": "Lap 3-4 position change",
-    "pos_45": "Lap 4-5 position change",
-    "mean_lap": "Mean lap time",
-    "speed_var": "Speed variability",
-    "pos_stability": "Position stability",
-    "start_ratio": "Start-speed ratio",
-    "sprint_ratio": "Sprint-speed ratio",
-    "pos_improvement": "Position improvement",
+TEXT = {
+    "zh": {
+        "title": "短道速滑多距离教练工作台",
+        "subtitle": "500m / 1000m / 1500m 赛后模型参考系统",
+        "language": "语言",
+        "distance": "距离",
+        "mode": "分析方式",
+        "single": "单场输入",
+        "batch": "批量上传",
+        "model": "模型版本",
+        "training": "训练数据行数",
+        "manual": "手动输入单场数据",
+        "sample": "使用示例数据",
+        "athlete": "运动员 / 样本名",
+        "round": "轮次",
+        "qual": "晋级代码",
+        "total": "官方总成绩（秒，可留空后按圈速求和）",
+        "lap_time": "第 {lap} 圈成绩",
+        "lap_pos": "第 {lap} 圈位置",
+        "run": "开始分析",
+        "conclusion": "比赛结论",
+        "grade": "成绩等级",
+        "adv": "晋级参考",
+        "final": "决赛入围概率",
+        "round_pred": "最高轮次预测",
+        "style": "战术风格",
+        "rhythm": "节奏类型",
+        "key": "关键圈",
+        "risk": "异常风险",
+        "explain": "模型解释",
+        "global": "全局重要因素",
+        "local": "当前样本重点",
+        "notes": "教练建议",
+        "upload": "上传 CSV 或 Excel",
+        "download": "下载分析结果",
+        "report": "下载单场报告",
+        "template": "下载输入模板",
+        "warning": "本工具为赛后决策支持，不替代录像分析和教练判断。",
+        "missing": "上传文件缺少以下字段：",
+    },
+    "en": {
+        "title": "Short-Track Multi-Distance Coach Workspace",
+        "subtitle": "Post-race model reference for 500m / 1000m / 1500m",
+        "language": "Language",
+        "distance": "Distance",
+        "mode": "Analysis mode",
+        "single": "Single race",
+        "batch": "Batch upload",
+        "model": "Model version",
+        "training": "Training rows",
+        "manual": "Manual single-race input",
+        "sample": "Use sample data",
+        "athlete": "Athlete / sample name",
+        "round": "Round",
+        "qual": "Qualification code",
+        "total": "Official total time (seconds, optional)",
+        "lap_time": "Lap {lap} time",
+        "lap_pos": "Lap {lap} position",
+        "run": "Analyze",
+        "conclusion": "Race conclusion",
+        "grade": "Performance grade",
+        "adv": "Advancement reference",
+        "final": "Final-entry probability",
+        "round_pred": "Highest round prediction",
+        "style": "Tactical style",
+        "rhythm": "Rhythm type",
+        "key": "Key lap",
+        "risk": "Anomaly risk",
+        "explain": "Model explanation",
+        "global": "Global drivers",
+        "local": "Current sample focus",
+        "notes": "Coach notes",
+        "upload": "Upload CSV or Excel",
+        "download": "Download results",
+        "report": "Download single-race report",
+        "template": "Download input template",
+        "warning": "This is post-race decision support, not a replacement for video review or coach judgement.",
+        "missing": "Uploaded file is missing these columns:",
+    },
 }
 
 
 @st.cache_resource
-def load_assets():
-    grade_meta = json.loads((GRADE_DIR / "metadata.json").read_text(encoding="utf-8"))
-    adv_meta = json.loads((ADV_DIR / "metadata.json").read_text(encoding="utf-8"))
-    grade_model = CatBoostClassifier()
-    grade_model.load_model(str(GRADE_DIR / "CatBoost.cbm"))
-    adv_model = CatBoostClassifier()
-    adv_model.load_model(str(ADV_DIR / "CatBoost.cbm"))
-    return grade_model, adv_model, grade_meta, adv_meta
+def service() -> PredictionService:
+    return PredictionService(PACKAGE_DIR)
 
 
-def compute_features(total_time: float, lap_times: list[float], lap_positions: list[int]) -> dict[str, float]:
-    lap_times_arr = np.array(lap_times, dtype=float)
-    lap_pos_arr = np.array(lap_positions, dtype=float)
-    mean_lap = float(np.mean(lap_times_arr))
-    return {
-        "total_time": float(total_time),
-        "lap1_pos": float(lap_positions[0]),
-        "lap1_time": float(lap_times[0]),
-        "lap2_pos": float(lap_positions[1]),
-        "lap2_time": float(lap_times[1]),
-        "lap3_pos": float(lap_positions[2]),
-        "lap3_time": float(lap_times[2]),
-        "lap4_pos": float(lap_positions[3]),
-        "lap4_time": float(lap_times[3]),
-        "lap5_pos": float(lap_positions[4]),
-        "lap5_time": float(lap_times[4]),
-        "speed_12": float(lap_times[1] - lap_times[0]),
-        "speed_23": float(lap_times[2] - lap_times[1]),
-        "speed_34": float(lap_times[3] - lap_times[2]),
-        "speed_45": float(lap_times[4] - lap_times[3]),
-        "pos_12": float(lap_positions[1] - lap_positions[0]),
-        "pos_23": float(lap_positions[2] - lap_positions[1]),
-        "pos_34": float(lap_positions[3] - lap_positions[2]),
-        "pos_45": float(lap_positions[4] - lap_positions[3]),
-        "mean_lap": mean_lap,
-        "speed_var": float(np.std(lap_times_arr, ddof=0)),
-        "pos_stability": float(np.std(lap_pos_arr, ddof=0)),
-        "start_ratio": float(lap_times[0] / mean_lap) if mean_lap else 0.0,
-        "sprint_ratio": float(lap_times[4] / mean_lap) if mean_lap else 0.0,
-        "pos_improvement": float(lap_positions[0] - lap_positions[4]),
+def t(key: str) -> str:
+    return TEXT[st.session_state.lang][key]
+
+
+def sample_frame(distance: str) -> pd.DataFrame:
+    path = PACKAGE_DIR / "examples" / f"example_input_{distance}_grade.csv"
+    return pd.read_csv(path)
+
+
+def template_frame(distance: str) -> pd.DataFrame:
+    sample = sample_frame(distance).head(1).copy()
+    return sample[service().required_columns(distance)]
+
+
+def manual_frame(distance: str, use_sample: bool) -> pd.DataFrame:
+    laps = DISTANCE_LAPS[distance]
+    defaults = sample_frame(distance).iloc[0].to_dict() if use_sample else {}
+    with st.form("manual_form"):
+        st.subheader(t("manual"))
+        c1, c2, c3, c4 = st.columns([1.2, 0.8, 0.8, 1.0])
+        athlete = c1.text_input(t("athlete"), value=str(defaults.get("athlete_name", "Athlete A")))
+        round_name = c2.text_input(t("round"), value=str(defaults.get("round", "Heats")))
+        qual = c3.text_input(t("qual"), value=str(defaults.get("qual_code", "")))
+        total_default = float(defaults.get("official_total_time", 0) or 0)
+        total = c4.number_input(t("total"), min_value=0.0, max_value=300.0, value=total_default, step=0.001)
+
+        lap_times = []
+        lap_positions = []
+        for start in range(1, laps + 1, 4):
+            cols = st.columns(min(4, laps - start + 1))
+            for offset, col in enumerate(cols):
+                lap = start + offset
+                with col:
+                    lap_times.append(
+                        st.number_input(
+                            t("lap_time").format(lap=lap),
+                            min_value=0.0,
+                            max_value=60.0,
+                            value=float(defaults.get(f"lap{lap}_time", 0) or 0),
+                            step=0.001,
+                            key=f"time_{distance}_{lap}",
+                        )
+                    )
+                    lap_positions.append(
+                        st.number_input(
+                            t("lap_pos").format(lap=lap),
+                            min_value=1,
+                            max_value=12,
+                            value=int(float(defaults.get(f"lap{lap}_position", 1) or 1)),
+                            step=1,
+                            key=f"pos_{distance}_{lap}",
+                        )
+                    )
+        submitted = st.form_submit_button(t("run"), type="primary")
+    if not submitted:
+        return pd.DataFrame()
+    row = {
+        "athlete_name": athlete,
+        "distance": distance,
+        "round": round_name,
+        "qual_code": qual,
+        "official_total_time": total if total > 0 else None,
     }
+    for i, value in enumerate(lap_times, 1):
+        row[f"lap{i}_time"] = value
+    for i, value in enumerate(lap_positions, 1):
+        row[f"lap{i}_position"] = value
+    row["reconstructed_total_time"] = sum(lap_times)
+    return pd.DataFrame([row])
 
 
-def feature_frame(meta: dict, features: dict[str, float]) -> pd.DataFrame:
-    all_order = [
-        "total_time",
-        "lap1_pos",
-        "lap1_time",
-        "lap2_pos",
-        "lap2_time",
-        "lap3_pos",
-        "lap3_time",
-        "lap4_pos",
-        "lap4_time",
-        "lap5_pos",
-        "lap5_time",
-        "speed_12",
-        "speed_23",
-        "speed_34",
-        "speed_45",
-        "pos_12",
-        "pos_23",
-        "pos_34",
-        "pos_45",
-        "mean_lap",
-        "speed_var",
-        "pos_stability",
-        "start_ratio",
-        "sprint_ratio",
-        "pos_improvement",
-    ]
-    selected = all_order[-23:] if len(meta["feature_columns"]) == 23 else all_order
-    values = [features[k] for k in selected]
-    return pd.DataFrame([values], columns=meta["feature_columns"])
-
-
-def class_probability(model: CatBoostClassifier, meta: dict, frame: pd.DataFrame) -> tuple[str, np.ndarray]:
-    proba = np.asarray(model.predict_proba(frame))[0]
-    labels = [str(x) for x in meta["class_labels"]]
-    return labels[int(np.argmax(proba))], proba
-
-
-def shap_table(model: CatBoostClassifier, meta: dict, frame: pd.DataFrame, friendly_order: list[str], target_index: int = 0) -> pd.DataFrame:
-    pool = Pool(frame, feature_names=meta["feature_columns"])
-    contrib = model.get_feature_importance(pool, type="ShapValues")
-    arr = np.asarray(contrib)
-    if arr.ndim == 3:
-        values = arr[0, target_index, :-1]
-    else:
-        values = arr[0, :-1]
-    names = friendly_order[-len(values):]
-    table = pd.DataFrame(
-        {
-            "Feature": [FRIENDLY_NAMES.get(name, name) for name in names],
-            "Contribution": values,
-            "AbsContribution": np.abs(values),
-        }
-    ).sort_values("AbsContribution", ascending=False)
-    return table.head(8)
-
-
-def gauge(value: float, title: str, color: str) -> go.Figure:
-    fig = go.Figure(
-        go.Indicator(
-            mode="gauge+number",
-            value=value * 100,
-            number={"suffix": "%", "font": {"size": 28}},
-            title={"text": title, "font": {"size": 15}},
-            gauge={
-                "axis": {"range": [0, 100]},
-                "bar": {"color": color},
-                "bgcolor": "white",
-                "borderwidth": 1,
-                "bordercolor": "#d8dee9",
-                "steps": [
-                    {"range": [0, 40], "color": "#f8d7da"},
-                    {"range": [40, 70], "color": "#fff3cd"},
-                    {"range": [70, 100], "color": "#d1e7dd"},
-                ],
-            },
-        )
-    )
-    fig.update_layout(height=220, margin=dict(l=20, r=20, t=45, b=10), paper_bgcolor="rgba(0,0,0,0)")
-    return fig
-
-
-def lap_chart(lap_times: list[float], positions: list[int]) -> go.Figure:
-    laps = [1, 2, 3, 4, 5]
+def line_chart(row: pd.Series, distance: str) -> go.Figure:
+    laps = list(range(1, DISTANCE_LAPS[distance] + 1))
+    times = [row[f"lap{i}_time"] for i in laps]
+    pos = [row[f"lap{i}_position"] for i in laps]
     fig = go.Figure()
+    fig.add_trace(go.Scatter(x=laps, y=times, name="Lap time", mode="lines+markers", line={"color": "#245b8f"}))
     fig.add_trace(
         go.Scatter(
             x=laps,
-            y=lap_times,
-            mode="lines+markers",
-            name="Lap time",
-            line=dict(color="#2f5d8c", width=3),
-            marker=dict(size=9),
-            yaxis="y1",
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=laps,
-            y=positions,
-            mode="lines+markers",
+            y=pos,
             name="Position",
-            line=dict(color="#c14953", width=3, dash="dot"),
-            marker=dict(size=9),
+            mode="lines+markers",
             yaxis="y2",
+            line={"color": "#b84a4a", "dash": "dot"},
         )
     )
     fig.update_layout(
         height=310,
-        margin=dict(l=40, r=45, t=20, b=35),
-        xaxis=dict(title="Lap", dtick=1),
-        yaxis=dict(title="Lap time (s)", rangemode="tozero"),
-        yaxis2=dict(title="Position", overlaying="y", side="right", autorange="reversed", dtick=1),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="#fbfcfd",
+        margin={"l": 30, "r": 35, "t": 20, "b": 30},
+        xaxis={"dtick": 1, "title": "Lap"},
+        yaxis={"title": "Seconds"},
+        yaxis2={"title": "Position", "overlaying": "y", "side": "right", "autorange": "reversed", "dtick": 1},
+        legend={"orientation": "h", "y": 1.08},
     )
     return fig
 
 
-def contribution_bar(table: pd.DataFrame, title: str) -> go.Figure:
-    ordered = table.iloc[::-1]
-    colors = ["#2e7d62" if v >= 0 else "#b94a48" for v in ordered["Contribution"]]
-    fig = go.Figure(go.Bar(x=ordered["Contribution"], y=ordered["Feature"], orientation="h", marker_color=colors))
-    fig.update_layout(
-        title=title,
-        height=310,
-        margin=dict(l=20, r=20, t=50, b=20),
-        xaxis_title="Model contribution",
-        yaxis_title=None,
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="#fbfcfd",
-    )
-    return fig
+def show_results(raw: pd.DataFrame, distance: str) -> pd.DataFrame:
+    svc = service()
+    output = svc.predict(distance, raw)
+    first = output.iloc[0]
+
+    st.subheader(t("conclusion"))
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric(t("grade"), str(first["grade"]), f"{first['grade_probability']:.0%}")
+    c2.metric(t("adv"), str(first["advancement_reference"]), f"{first['advancement_probability']:.0%}")
+    c3.metric(t("final"), f"{first['final_entry_probability']:.0%}", str(first["final_entry_reference"]))
+    c4.metric(t("round_pred"), str(first["max_round"]), f"{first['max_round_probability']:.0%}")
+
+    c5, c6, c7, c8 = st.columns(4)
+    c5.metric(t("style"), str(first["tactical_style"]))
+    c6.metric(t("rhythm"), str(first["rhythm_type"]))
+    c7.metric(t("key"), str(first["key_lap"]))
+    c8.metric(t("risk"), str(first["risk_label"]), f"{first['risk_score']:.3f}")
+
+    left, right = st.columns([1.15, 0.85])
+    with left:
+        st.plotly_chart(line_chart(raw.iloc[0], distance), use_container_width=True)
+    with right:
+        st.subheader(t("notes"))
+        for note in svc.coach_notes(distance, first):
+            st.info(note)
+
+    st.subheader(t("explain"))
+    tabs = st.tabs([t("global"), t("local")])
+    with tabs[0]:
+        task = st.selectbox("Task", ["advancement", "grade", "final_entry", "max_round", "tactical_style", "key_lap"])
+        st.dataframe(svc.global_explanation(distance, task), hide_index=True, use_container_width=True)
+    with tabs[1]:
+        st.dataframe(svc.local_explanation(distance, "advancement", raw), hide_index=True, use_container_width=True)
+
+    report = build_report(distance, first, svc.coach_notes(distance, first))
+    st.download_button(t("report"), report, file_name=f"short_track_{distance}_report.md", mime="text/markdown")
+    return output
 
 
-def coach_notes(features: dict[str, float], adv_prob: float, grade_label: str) -> list[str]:
-    notes: list[str] = []
-    if features["lap5_pos"] <= 2:
-        notes.append("Final-lap position is competition-ready: the athlete entered the decisive phase in a realistic advancement lane.")
-    else:
-        notes.append("Late-race position is the main review point: video should check first-corner entry, lane protection, and missed passing windows.")
-    if features["pos_improvement"] > 0:
-        notes.append("Position improved across the race, suggesting useful tactical recovery or overtaking effectiveness.")
-    elif features["pos_improvement"] < 0:
-        notes.append("Position deteriorated across the race; review whether speed loss, contact, or lane choice caused the drop.")
-    if features["speed_var"] > 1.2:
-        notes.append("Lap-time variability is high for a 500 m profile; check for technical disruption, contact, or pacing instability.")
-    else:
-        notes.append("Lap-time variability is controlled; the next review should focus on whether stable speed was converted into position.")
-    if adv_prob >= 0.7 and grade_label in {"1", "2"}:
-        notes.append("Overall profile is strong: maintain the current start-to-finish structure and refine race-specific details.")
-    elif adv_prob < 0.45:
-        notes.append("Advancement reference is low; this should be treated as a tactical-position warning rather than a final verdict.")
-    return notes
+def build_report(distance: str, row: pd.Series, notes: list[str]) -> str:
+    lines = [
+        f"# Short-Track Coach Report - {distance}",
+        "",
+        f"- Athlete/sample: {row.get('athlete_name', '')}",
+        f"- Performance grade: {row['grade']} ({row['grade_probability']:.1%})",
+        f"- Advancement reference: {row['advancement_reference']} ({row['advancement_probability']:.1%})",
+        f"- Final-entry probability: {row['final_entry_probability']:.1%}",
+        f"- Highest round prediction: {row['max_round']}",
+        f"- Tactical style: {row['tactical_style']}",
+        f"- Rhythm type: {row['rhythm_type']}",
+        f"- Key lap: {row['key_lap']}",
+        f"- Risk: {row['risk_label']} ({row['risk_score']:.3f})",
+        "",
+        "## Coach Notes",
+    ]
+    lines.extend(f"- {note}" for note in notes)
+    return "\n".join(lines)
 
 
-def app() -> None:
-    st.set_page_config(
-        page_title="500 m Short-Track Coach Dashboard",
-        page_icon="ST",
-        layout="wide",
-        initial_sidebar_state="expanded",
-    )
+def read_upload(uploaded) -> pd.DataFrame:
+    if uploaded.name.lower().endswith(".csv"):
+        return pd.read_csv(uploaded)
+    return pd.read_excel(uploaded)
+
+
+def output_bytes(df: pd.DataFrame) -> bytes:
+    buffer = BytesIO()
+    df.to_excel(buffer, index=False)
+    return buffer.getvalue()
+
+
+def main() -> None:
+    st.set_page_config(page_title="Short-Track Coach Workspace", page_icon="ST", layout="wide")
     st.markdown(
         """
         <style>
-        .main .block-container {padding-top: 1.25rem; padding-bottom: 2rem;}
-        div[data-testid="stMetric"] {background: #f8fafc; border: 1px solid #dce3ea; padding: 12px 14px; border-radius: 8px;}
-        .coach-card {border: 1px solid #dce3ea; border-radius: 8px; padding: 14px 16px; background: #ffffff;}
-        .small-note {color: #52616f; font-size: 0.9rem;}
+        .block-container {padding-top: 1.2rem; padding-bottom: 2rem;}
+        div[data-testid="stMetric"] {background:#f8fafc;border:1px solid #d7dee8;border-radius:8px;padding:12px;}
         </style>
         """,
         unsafe_allow_html=True,
     )
+    if "lang" not in st.session_state:
+        st.session_state.lang = "zh"
 
-    grade_model, adv_model, grade_meta, adv_meta = load_assets()
-    screenshot_mode = st.query_params.get("screenshot", "")
-
-    st.title("500 m World Cup Short-Track Coach Dashboard")
-    st.caption("Explainable post-race reference system based on the final 2024-2025 lap-level machine-learning models.")
-
-    preset = st.sidebar.selectbox(
-        "Sample profile",
-        ["Balanced finalist profile", "Fast but trapped profile", "Developing recovery profile", "Manual input"],
-    )
-    presets = {
-        "Balanced finalist profile": ([7.30, 8.92, 8.78, 8.84, 8.71], [2, 2, 2, 1, 1], 42.55),
-        "Fast but trapped profile": ([7.18, 8.72, 8.66, 8.80, 8.75], [3, 3, 4, 4, 4], 42.21),
-        "Developing recovery profile": ([7.65, 9.35, 9.10, 8.98, 8.82], [5, 5, 4, 3, 3], 43.90),
-        "Manual input": ([7.35, 8.95, 8.85, 8.90, 8.80], [3, 3, 2, 2, 2], 42.85),
-    }
-    default_times, default_pos, default_total = presets[preset]
-
-    st.sidebar.header("Race input")
-    athlete = st.sidebar.text_input("Athlete / race label", value="Athlete A - 500 m")
-    adv_special = st.sidebar.checkbox("ADV special outcome", value=False)
-    total_time = st.sidebar.number_input("Official total time (s)", min_value=30.0, max_value=120.0, value=float(default_total), step=0.01)
-
-    st.sidebar.subheader("Lap times and positions")
-    lap_times: list[float] = []
-    lap_positions: list[int] = []
-    for i in range(5):
-        col_t, col_p = st.sidebar.columns([1.1, 0.9])
-        with col_t:
-            lap_times.append(st.number_input(f"Lap {i + 1} time", min_value=1.0, max_value=40.0, value=float(default_times[i]), step=0.01, key=f"time_{i}"))
-        with col_p:
-            lap_positions.append(st.number_input(f"Lap {i + 1} pos", min_value=1, max_value=8, value=int(default_pos[i]), step=1, key=f"pos_{i}"))
-
-    features = compute_features(total_time, lap_times, lap_positions)
-    friendly_order = list(FRIENDLY_NAMES.keys())
-    grade_frame = feature_frame(grade_meta, features)
-    adv_frame = feature_frame(adv_meta, features)
-
-    grade_label, grade_proba = class_probability(grade_model, grade_meta, grade_frame)
-    adv_label, adv_proba = class_probability(adv_model, adv_meta, adv_frame)
-    adv_positive_prob = float(adv_proba[1]) if len(adv_proba) > 1 else float(adv_proba[0])
-
-    grade_idx = int(np.argmax(grade_proba))
-    grade_shap = shap_table(grade_model, grade_meta, grade_frame, friendly_order, target_index=grade_idx)
-    adv_shap = shap_table(adv_model, adv_meta, adv_frame, friendly_order, target_index=1)
-
-    top = st.columns([1.1, 1.0, 1.0, 1.0])
-    top[0].metric("Race label", athlete)
-    top[1].metric("Performance grade", f"Grade {grade_label}", "1 = fastest group")
-    top[2].metric("Advancement reference", f"{adv_positive_prob:.1%}", "ordinary ADV excluded")
-    top[3].metric("Final-lap position", f"{features['lap5_pos']:.0f}", f"improvement {features['pos_improvement']:+.0f}")
-
-    if adv_special:
-        st.warning("ADV was marked as a special outcome. The advancement model was trained for ordinary advancement reference after excluding ADV cases; interpret this race separately.")
-
-    left, right = st.columns([1.15, 0.85])
-    with left:
-        st.subheader("Lap profile")
-        st.plotly_chart(lap_chart(lap_times, lap_positions), use_container_width=True)
-    with right:
-        st.subheader("Model confidence")
-        g1, g2 = st.columns(2)
-        with g1:
-            st.plotly_chart(gauge(float(np.max(grade_proba)), "Grade confidence", "#2f5d8c"), use_container_width=True)
-        with g2:
-            st.plotly_chart(gauge(adv_positive_prob, "Advancement reference", "#2e7d62"), use_container_width=True)
-
-    if screenshot_mode == "explain":
-        st.subheader("Model explanations")
-        c1, c2 = st.columns(2)
-        with c1:
-            st.plotly_chart(contribution_bar(grade_shap, "Grade model: main local contributions"), use_container_width=True)
-        with c2:
-            st.plotly_chart(contribution_bar(adv_shap, "Advancement model: main local contributions"), use_container_width=True)
-        st.markdown(
-            '<p class="small-note">Positive and negative bars show local model contributions for the current race profile. They support review, not causal claims.</p>',
-            unsafe_allow_html=True,
+    with st.sidebar:
+        lang_label = st.selectbox("Language / 语言", ["中文", "English"])
+        st.session_state.lang = "zh" if lang_label == "中文" else "en"
+        distance = st.radio(t("distance"), ["500m", "1000m", "1500m"], horizontal=True)
+        mode = st.radio(t("mode"), [t("single"), t("batch")])
+        use_sample = st.checkbox(t("sample"), value=True)
+        meta = service().manifest["models"][f"{distance}_advancement"]
+        st.caption(f"{t('model')}: {service().manifest['created_at']}")
+        st.caption(f"{t('training')}: {meta['n_training_rows']:,}")
+        st.download_button(
+            t("template"),
+            template_frame(distance).to_csv(index=False).encode("utf-8-sig"),
+            file_name=f"template_{distance}.csv",
+            mime="text/csv",
         )
 
-    tab1, tab2, tab3 = st.tabs(["Coach interpretation", "Model explanations", "Feature table"])
-    with tab1:
-        st.subheader("Coach-facing notes")
-        for note in coach_notes(features, adv_positive_prob, grade_label):
-            st.markdown(f'<div class="coach-card">{note}</div>', unsafe_allow_html=True)
-            st.write("")
-        st.markdown(
-            '<p class="small-note">This dashboard is a post-race decision-support tool. It summarizes model evidence for coach review and does not replace video analysis or expert judgement.</p>',
-            unsafe_allow_html=True,
-        )
-    with tab2:
-        c1, c2 = st.columns(2)
-        with c1:
-            st.plotly_chart(contribution_bar(grade_shap, "Grade model: main local contributions"), use_container_width=True)
-        with c2:
-            st.plotly_chart(contribution_bar(adv_shap, "Advancement model: main local contributions"), use_container_width=True)
-    with tab3:
-        display = pd.DataFrame(
-            {
-                "Feature": [FRIENDLY_NAMES[k] for k in friendly_order],
-                "Value": [features[k] for k in friendly_order],
-            }
-        )
-        st.dataframe(display, use_container_width=True, hide_index=True)
-        st.caption("Derived features are computed automatically from official total time, five lap times, and five lap positions.")
+    st.title(t("title"))
+    st.caption(t("subtitle"))
+    st.warning(t("warning"), icon="!")
 
-    st.divider()
-    st.caption(
-        "Final grouped-validation metrics: grade model weighted F1 = 0.920, macro AUC = 0.982; advancement model weighted F1 = 0.823, AUC = 0.894."
-    )
+    if mode == t("single"):
+        raw = manual_frame(distance, use_sample)
+        if not raw.empty:
+            show_results(raw, distance)
+    else:
+        uploaded = st.file_uploader(t("upload"), type=["csv", "xlsx", "xls"])
+        if uploaded is not None:
+            raw = read_upload(uploaded)
+            required = service().required_columns(distance)
+            missing = [col for col in required if col not in raw.columns]
+            if missing:
+                st.error(f"{t('missing')} {', '.join(missing)}")
+            else:
+                output = service().predict(distance, raw)
+                st.dataframe(output, hide_index=True, use_container_width=True)
+                st.download_button(
+                    t("download"),
+                    output_bytes(output),
+                    file_name=f"short_track_{distance}_analysis.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
 
 
 if __name__ == "__main__":
-    app()
+    main()

@@ -1,0 +1,6 @@
+﻿sample_id,athlete_name,distance,round,qual_code,official_total_time,reconstructed_total_time,lap1_time,lap2_time,lap3_time,lap4_time,lap5_time,lap6_time,lap7_time,lap8_time,lap9_time,lap1_position,lap2_position,lap3_position,lap4_position,lap5_position,lap6_position,lap7_position,lap8_position,lap9_position
+1000m_000000,Kasandra Bradette,1000m,Heats,q,98.279,98.27000000000001,14.97,12.65,10.79,10.47,10.47,9.9,9.48,9.58,9.96,1.0,1.0,2.0,2.0,2.0,2.0,1.0,1.0,1.0
+1000m_000001,Sofia Thorup-Prosvirnova,1000m,Heats,q,98.374,98.37,15.06,12.71,10.51,10.49,10.43,10.02,9.67,9.51,9.97,2.0,3.0,1.0,1.0,1.0,1.0,2.0,2.0,2.0
+1000m_000002,Alica Porubská,1000m,Heats,,98.691,98.69000000000001,15.16,12.7,10.69,10.44,10.45,9.96,9.62,9.7,9.97,3.0,4.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0
+1000m_000003,Aurelie MONVOISIN,1000m,Heats,,98.708,98.69999999999999,15.23,12.45,10.97,10.35,10.55,9.96,9.55,9.73,9.91,4.0,2.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0
+1000m_000004,Alica Porubská,1000m,Rep. Heats,q,101.584,101.58,17.22,12.05,11.68,10.42,10.01,10.04,9.99,10.0,10.17,3.0,3.0,4.0,4.0,2.0,2.0,1.0,1.0,1.0

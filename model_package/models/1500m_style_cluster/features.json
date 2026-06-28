@@ -1,0 +1,20 @@
+[
+  "start_ratio_to_mean",
+  "finish_ratio_to_mean",
+  "finish_vs_mid_delta",
+  "finish_vs_previous_delta",
+  "lap_time_std",
+  "lap_time_cv",
+  "lap_time_delta_std",
+  "start_position",
+  "final_position",
+  "mean_position",
+  "position_std",
+  "position_range",
+  "position_gain_total",
+  "overtake_events_count",
+  "position_loss_events_count",
+  "positive_position_gain_sum",
+  "negative_position_loss_sum",
+  "position_stability_score"
+]

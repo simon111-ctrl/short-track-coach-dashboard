@@ -1,0 +1,518 @@
+{
+  "created_at": "2026-06-28T11:45:04",
+  "source_data_dir": "C:\\Users\\Administrator\\Documents\\short_track_model_training_20260628\\data_raw",
+  "label_rules": {
+    "advancement_label": "1 when qual is one of Q, QA, QB, QAA, QAB, QBA, QBB, q, qA, qB, ADV, ADA, ADVA, ADVB; otherwise 0. Any Final round is excluded from advancement training.",
+    "grade_label": "Within each distance, reconstructed total time is divided into quartiles; 3 is fastest/top quartile and 0 is slowest/bottom quartile. Grade models exclude total-time and direct mean-time features.",
+    "max_round_score": "For each athlete within the same distance/event URL, the maximum normalized round score reached is used as the label.",
+    "final_entry_label": "1 when max_round_score reaches Ranking Finals, Final B, Finals, or Final A; otherwise 0.",
+    "style_cluster": "Unsupervised KMeans clusters from rhythm, pacing, and position-control features.",
+    "tactical_style_label": "Rule-generated style label: front_runner, late_attacker, stable_controller, volatile_risk, or chaser.",
+    "key_lap_label": "Rule-generated lap number with the largest combined lap-time deviation, position-change, and final-transition signal.",
+    "risk_detection": "Unsupervised IsolationForest anomaly/risk score from lap variability, position instability, and finish deterioration features."
+  },
+  "missing_lap_rule": "Rows are removed if any lap time or lap position is missing. If all lap times exist but official total time is missing, total time is filled from the lap-time sum and flagged.",
+  "models": {
+    "500m_advancement": {
+      "distance": "500m",
+      "task": "advancement",
+      "target": "advancement_label",
+      "model_file": "models/500m_advancement/model.joblib",
+      "features_file": "models/500m_advancement/features.json",
+      "n_training_rows": 9356,
+      "n_features": 55,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "500m_grade": {
+      "distance": "500m",
+      "task": "grade",
+      "target": "grade_label",
+      "model_file": "models/500m_grade/model.joblib",
+      "features_file": "models/500m_grade/features.json",
+      "n_training_rows": 10116,
+      "n_features": 34,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "500m_max_round": {
+      "distance": "500m",
+      "task": "max_round",
+      "target": "max_round_score",
+      "model_file": "models/500m_max_round/model.joblib",
+      "features_file": "models/500m_max_round/features.json",
+      "n_training_rows": 10116,
+      "n_features": 55,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ],
+      "label_map": {
+        "1": "Preliminaries",
+        "2": "Rep. Heats",
+        "3": "Heats",
+        "4": "Rep. Quarterfinals",
+        "5": "Quarterfinals",
+        "6": "Rep. Semifinals",
+        "7": "Semifinals",
+        "8": "Ranking/Final B",
+        "9": "Final/Final A"
+      }
+    },
+    "500m_final_entry": {
+      "distance": "500m",
+      "task": "final_entry",
+      "target": "final_entry_label",
+      "model_file": "models/500m_final_entry/model.joblib",
+      "features_file": "models/500m_final_entry/features.json",
+      "n_training_rows": 10116,
+      "n_features": 55,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "500m_tactical_style": {
+      "distance": "500m",
+      "task": "tactical_style",
+      "target": "tactical_style_label",
+      "model_file": "models/500m_tactical_style/model.joblib",
+      "features_file": "models/500m_tactical_style/features.json",
+      "n_training_rows": 10116,
+      "n_features": 34,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ],
+      "label_map": {
+        "0": "front_runner",
+        "1": "late_attacker",
+        "2": "stable_controller",
+        "3": "volatile_risk",
+        "4": "chaser"
+      }
+    },
+    "500m_key_lap": {
+      "distance": "500m",
+      "task": "key_lap",
+      "target": "key_lap_label",
+      "model_file": "models/500m_key_lap/model.joblib",
+      "features_file": "models/500m_key_lap/features.json",
+      "n_training_rows": 10116,
+      "n_features": 55,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "500m_style_cluster": {
+      "distance": "500m",
+      "task": "style_cluster",
+      "target": "unsupervised_style_cluster",
+      "model_file": "models/500m_style_cluster/model.joblib",
+      "features_file": "models/500m_style_cluster/features.json",
+      "n_training_rows": 10116,
+      "n_features": 18,
+      "cluster_centers_file": "reports/cluster_centers_500m_style_cluster.csv",
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url"
+      ]
+    },
+    "500m_risk_detection": {
+      "distance": "500m",
+      "task": "risk_detection",
+      "target": "unsupervised_anomaly_score",
+      "model_file": "models/500m_risk_detection/model.joblib",
+      "features_file": "models/500m_risk_detection/features.json",
+      "n_training_rows": 10116,
+      "n_features": 15,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url"
+      ]
+    },
+    "1000m_advancement": {
+      "distance": "1000m",
+      "task": "advancement",
+      "target": "advancement_label",
+      "model_file": "models/1000m_advancement/model.joblib",
+      "features_file": "models/1000m_advancement/features.json",
+      "n_training_rows": 9204,
+      "n_features": 70,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "1000m_grade": {
+      "distance": "1000m",
+      "task": "grade",
+      "target": "grade_label",
+      "model_file": "models/1000m_grade/model.joblib",
+      "features_file": "models/1000m_grade/features.json",
+      "n_training_rows": 9996,
+      "n_features": 45,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "1000m_max_round": {
+      "distance": "1000m",
+      "task": "max_round",
+      "target": "max_round_score",
+      "model_file": "models/1000m_max_round/model.joblib",
+      "features_file": "models/1000m_max_round/features.json",
+      "n_training_rows": 9996,
+      "n_features": 70,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ],
+      "label_map": {
+        "1": "Preliminaries",
+        "2": "Rep. Heats",
+        "3": "Heats",
+        "4": "Rep. Quarterfinals",
+        "5": "Quarterfinals",
+        "6": "Rep. Semifinals",
+        "7": "Semifinals",
+        "8": "Ranking/Final B",
+        "9": "Final/Final A"
+      }
+    },
+    "1000m_final_entry": {
+      "distance": "1000m",
+      "task": "final_entry",
+      "target": "final_entry_label",
+      "model_file": "models/1000m_final_entry/model.joblib",
+      "features_file": "models/1000m_final_entry/features.json",
+      "n_training_rows": 9996,
+      "n_features": 70,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "1000m_tactical_style": {
+      "distance": "1000m",
+      "task": "tactical_style",
+      "target": "tactical_style_label",
+      "model_file": "models/1000m_tactical_style/model.joblib",
+      "features_file": "models/1000m_tactical_style/features.json",
+      "n_training_rows": 9996,
+      "n_features": 45,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ],
+      "label_map": {
+        "0": "front_runner",
+        "1": "late_attacker",
+        "2": "stable_controller",
+        "3": "volatile_risk",
+        "4": "chaser"
+      }
+    },
+    "1000m_key_lap": {
+      "distance": "1000m",
+      "task": "key_lap",
+      "target": "key_lap_label",
+      "model_file": "models/1000m_key_lap/model.joblib",
+      "features_file": "models/1000m_key_lap/features.json",
+      "n_training_rows": 9996,
+      "n_features": 70,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "1000m_style_cluster": {
+      "distance": "1000m",
+      "task": "style_cluster",
+      "target": "unsupervised_style_cluster",
+      "model_file": "models/1000m_style_cluster/model.joblib",
+      "features_file": "models/1000m_style_cluster/features.json",
+      "n_training_rows": 9996,
+      "n_features": 18,
+      "cluster_centers_file": "reports/cluster_centers_1000m_style_cluster.csv",
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url"
+      ]
+    },
+    "1000m_risk_detection": {
+      "distance": "1000m",
+      "task": "risk_detection",
+      "target": "unsupervised_anomaly_score",
+      "model_file": "models/1000m_risk_detection/model.joblib",
+      "features_file": "models/1000m_risk_detection/features.json",
+      "n_training_rows": 9996,
+      "n_features": 15,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url"
+      ]
+    },
+    "1500m_advancement": {
+      "distance": "1500m",
+      "task": "advancement",
+      "target": "advancement_label",
+      "model_file": "models/1500m_advancement/model.joblib",
+      "features_file": "models/1500m_advancement/features.json",
+      "n_training_rows": 7797,
+      "n_features": 92,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "1500m_grade": {
+      "distance": "1500m",
+      "task": "grade",
+      "target": "grade_label",
+      "model_file": "models/1500m_grade/model.joblib",
+      "features_file": "models/1500m_grade/features.json",
+      "n_training_rows": 9013,
+      "n_features": 61,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "1500m_max_round": {
+      "distance": "1500m",
+      "task": "max_round",
+      "target": "max_round_score",
+      "model_file": "models/1500m_max_round/model.joblib",
+      "features_file": "models/1500m_max_round/features.json",
+      "n_training_rows": 9013,
+      "n_features": 92,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ],
+      "label_map": {
+        "1": "Preliminaries",
+        "2": "Rep. Heats",
+        "3": "Heats",
+        "4": "Rep. Quarterfinals",
+        "5": "Quarterfinals",
+        "6": "Rep. Semifinals",
+        "7": "Semifinals",
+        "8": "Ranking/Final B",
+        "9": "Final/Final A"
+      }
+    },
+    "1500m_final_entry": {
+      "distance": "1500m",
+      "task": "final_entry",
+      "target": "final_entry_label",
+      "model_file": "models/1500m_final_entry/model.joblib",
+      "features_file": "models/1500m_final_entry/features.json",
+      "n_training_rows": 9013,
+      "n_features": 92,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "1500m_tactical_style": {
+      "distance": "1500m",
+      "task": "tactical_style",
+      "target": "tactical_style_label",
+      "model_file": "models/1500m_tactical_style/model.joblib",
+      "features_file": "models/1500m_tactical_style/features.json",
+      "n_training_rows": 9013,
+      "n_features": 61,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ],
+      "label_map": {
+        "0": "front_runner",
+        "1": "late_attacker",
+        "2": "stable_controller",
+        "3": "volatile_risk",
+        "4": "chaser"
+      }
+    },
+    "1500m_key_lap": {
+      "distance": "1500m",
+      "task": "key_lap",
+      "target": "key_lap_label",
+      "model_file": "models/1500m_key_lap/model.joblib",
+      "features_file": "models/1500m_key_lap/features.json",
+      "n_training_rows": 9013,
+      "n_features": 92,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url",
+        "official_total_time for grade model",
+        "reconstructed_total_time for grade model"
+      ]
+    },
+    "1500m_style_cluster": {
+      "distance": "1500m",
+      "task": "style_cluster",
+      "target": "unsupervised_style_cluster",
+      "model_file": "models/1500m_style_cluster/model.joblib",
+      "features_file": "models/1500m_style_cluster/features.json",
+      "n_training_rows": 9013,
+      "n_features": 18,
+      "cluster_centers_file": "reports/cluster_centers_1500m_style_cluster.csv",
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url"
+      ]
+    },
+    "1500m_risk_detection": {
+      "distance": "1500m",
+      "task": "risk_detection",
+      "target": "unsupervised_anomaly_score",
+      "model_file": "models/1500m_risk_detection/model.joblib",
+      "features_file": "models/1500m_risk_detection/features.json",
+      "n_training_rows": 9013,
+      "n_features": 15,
+      "excluded_predictors": [
+        "athlete_name",
+        "sample_id",
+        "qual_code",
+        "round",
+        "round_raw",
+        "source_url"
+      ]
+    }
+  }
+}
