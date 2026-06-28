@@ -84,12 +84,12 @@ RHYTHM_HINTS = {
 }
 
 ADV_LABELS = {
-    "zh": {0: "晋级压力较大", 1: "晋级参考偏强"},
+    "zh": {0: "晋级压力大", 1: "有晋级机会"},
     "en": {0: "Needs review", 1: "Likely to advance"},
 }
 
 FINAL_LABELS = {
-    "zh": {0: "决赛通道偏弱", 1: "决赛通道偏强"},
+    "zh": {0: "暂时难进决赛", 1: "有机会进决赛"},
     "en": {0: "Final path uncertain", 1: "Final path likely"},
 }
 
@@ -416,7 +416,7 @@ class PredictionService:
             if adv >= 0.7:
                 notes.append("晋级信号偏强，当前结构可以继续保留，但需要盯紧细节。")
             elif adv >= 0.45:
-                notes.append("晋级信号处在中间带，重点看位置控制和关键圈处理。")
+                notes.append("晋级信号处在中间带，重点看位置控制和转折圈处理。")
             else:
                 notes.append("晋级信号偏弱，优先检查起跑、卡位和中后段执行。")
             if final >= 0.5:
@@ -428,7 +428,7 @@ class PredictionService:
             if "起速" in rhythm:
                 notes.append("起速偏快的比赛，前两圈不要把体能一次性打满，保留中后段反应空间。")
             elif "后程" in rhythm:
-                notes.append("后程型比赛，前段以占位为主，真正发力点放在关键圈前后。")
+                notes.append("后程型比赛，前段以占位为主，真正发力点放在转折圈前后。")
             elif "稳控" in rhythm or "均衡" in rhythm:
                 notes.append("节奏较稳，适合用固定圈速推进，减少无谓的节奏切换。")
             elif "波动" in rhythm:
@@ -437,7 +437,7 @@ class PredictionService:
                 notes.append("前快后掉的特征比较明显，建议把前段冲刺改成更平滑的推进。")
             if "追赶" in rhythm:
                 notes.append("追赶型比赛，关键是把差距留到最后可处理的范围，不要过早透支。")
-            notes.append(f"当前战术风格：{style}。关键圈：{key_lap}。")
+            notes.append(f"当前战术风格：{style}。转折圈：{key_lap}。")
             notes.append(f"这是赛后的{distance}参考结果，建议结合录像和教练判断一起看。")
         else:
             notes.append(f"Current profile reads as {grade}, with {self._adv_label(adv, value_lang)} and {self._final_label(final, value_lang)}.")
@@ -465,7 +465,7 @@ class PredictionService:
                 notes.append("The opening is strong but the finish fades, so smooth the first half instead of forcing it.")
             if "chase" in rhythm.lower():
                 notes.append("This is a chasing profile, so keep the gap manageable until the final decision point.")
-            notes.append(f"Current tactical style: {style}. Key lap: {key_lap}.")
+            notes.append(f"Current tactical style: {style}. Turning lap: {key_lap}.")
             notes.append(f"This is a post-race {distance} reference and should be combined with video and coach judgement.")
 
         return notes

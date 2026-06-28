@@ -28,3 +28,6 @@ def test_predict_distance_returns_all_coach_outputs():
     assert expected.issubset(result)
     assert 0 <= result["advancement_probability"] <= 1
     assert 0 <= result["final_entry_probability"] <= 1
+    assert result["advancement_reference"] in {"有晋级机会", "晋级压力大"}
+    assert result["final_entry_reference"] in {"有机会进决赛", "暂时难进决赛"}
+    assert not str(result["rhythm_type"]).startswith("Cluster")
