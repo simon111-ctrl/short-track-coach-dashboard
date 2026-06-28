@@ -16,8 +16,8 @@ PACKAGE_DIR = APP_DIR / "model_package"
 TEXT = {
     "zh": {
         "title": "短道速滑多距离教练工作台",
-        "subtitle": "500m / 1000m / 1500m 赛后分析、解释和建议",
-        "language": "语言",
+        "subtitle": "500米 / 1000米 / 1500米赛后分析、模型解释和训练建议",
+        "language": "界面语言",
         "distance": "距离",
         "mode": "分析方式",
         "single": "单场分析",
@@ -26,8 +26,8 @@ TEXT = {
         "sample": "使用示例数据",
         "athlete": "运动员 / 样本名",
         "round": "轮次",
-        "qual": "晋级代码",
-        "total": "官方总成绩（可留空）",
+        "qual": "晋级标记",
+        "total": "官方总成绩",
         "run": "开始分析",
         "model_info": "模型信息",
         "version": "模型版本",
@@ -37,35 +37,48 @@ TEXT = {
         "result": "比赛结论",
         "grade": "成绩等级",
         "adv": "晋级参考",
-        "final": "决赛入围",
+        "final": "决赛参考",
         "round_pred": "最高轮次",
         "style": "战术风格",
         "rhythm": "节奏类型",
         "key": "转折圈",
-        "risk": "异常风险",
+        "risk": "风险状态",
+        "risk_help": "风险正常表示这场的圈速、位置变化和节奏波动大体在模型见过的常见范围内；高风险表示波动明显偏大，建议重点回看碰撞、被卡位、掉速、换道和原始数据是否录错。",
         "explain": "模型解释",
-        "global": "最该看的 5 个点",
-        "local": "这场对应值",
-        "advice": "教练怎么打",
+        "global": "模型最看重的指标",
+        "local": "本场关键指标值",
+        "advice": "建议区",
         "batch_help": "批量上传说明",
         "template": "下载模板",
         "download": "下载结果",
         "upload": "上传 CSV / Excel",
         "missing": "缺少标准列：",
-        "input_hint": "下面这些信息都可以留空，系统会尽量只用你填的圈速和位置来分析。",
+        "input_hint": "系统会优先根据圈速和位置分析比赛；运动员名、轮次、晋级标记和官方总成绩只是辅助信息。",
         "optional_info": "可选信息",
         "summary": "核心结论",
         "pace_chart": "圈速与位置走势",
         "display_columns": "结果展示列",
         "guide": "列名对照",
-        "fill_hint": "都可留空",
-        "analysis_hint": "先填圈速和位置就能跑，其他信息只是帮助系统识别这场比赛。",
+        "analysis_hint": "先填每圈成绩和位置即可分析；其他信息只用于标记比赛背景。",
         "report": "下载单场报告",
         "adv_label": "晋级判断",
         "final_label": "决赛判断",
-        "entry_point": "比赛怎么打",
-        "risk_point": "风险提醒",
+        "entry_point": "比赛解读",
+        "risk_point": "风险说明",
         "next_point": "下一步怎么改",
+        "explain_task": "解释任务",
+        "importance_axis": "重要度",
+        "no_explain": "没有找到该任务的解释数据。",
+        "race_value": "本场指标值",
+        "lap_time": "第{lap}圈成绩",
+        "lap_position": "第{lap}圈位置",
+        "chart_lap": "圈数",
+        "chart_seconds": "秒",
+        "chart_position": "位置",
+        "chart_lap_time": "圈速",
+        "chart_position_trace": "位置",
+        "column_name": "标准列名",
+        "column_meaning": "含义",
     },
     "en": {
         "title": "Short-Track Multi-Distance Coach Workspace",
@@ -96,6 +109,7 @@ TEXT = {
         "rhythm": "Rhythm type",
         "key": "Turning lap",
         "risk": "Risk check",
+        "risk_help": "Normal means the lap-time, position, and rhythm changes are close to patterns the model has seen before. High risk means the race looks more unstable than usual, so review contact, fading, lane changes, and data quality.",
         "explain": "Model explanation",
         "global": "Top 5 things to watch",
         "local": "What this race shows",
@@ -119,6 +133,63 @@ TEXT = {
         "entry_point": "Race plan",
         "risk_point": "Risk note",
         "next_point": "What to change next",
+        "explain_task": "Explanation task",
+        "importance_axis": "Importance",
+        "no_explain": "No explanation data found.",
+        "race_value": "Race value",
+        "lap_time": "Lap {lap} time",
+        "lap_position": "Lap {lap} position",
+        "chart_lap": "Lap",
+        "chart_seconds": "Seconds",
+        "chart_position": "Position",
+        "chart_lap_time": "Lap time",
+        "chart_position_trace": "Position",
+        "column_name": "Column",
+        "column_meaning": "Meaning",
+    },
+}
+
+TASK_LABELS = {
+    "zh": {
+        "grade": "成绩等级",
+        "advancement": "晋级判断",
+        "final_entry": "决赛判断",
+        "max_round": "最高轮次",
+        "tactical_style": "战术风格",
+        "key_lap": "转折圈",
+    },
+    "en": {
+        "grade": "Performance grade",
+        "advancement": "Advancement call",
+        "final_entry": "Final call",
+        "max_round": "Highest round",
+        "tactical_style": "Tactical style",
+        "key_lap": "Turning lap",
+    },
+}
+
+DISPLAY_COL_LABELS = {
+    "zh": {
+        "athlete_name": "运动员 / 样本名",
+        "grade": "成绩等级",
+        "advancement_reference": "晋级判断",
+        "final_entry_reference": "决赛判断",
+        "max_round": "最高轮次",
+        "tactical_style": "战术风格",
+        "rhythm_type": "节奏类型",
+        "key_lap": "转折圈",
+        "risk_label": "风险状态",
+    },
+    "en": {
+        "athlete_name": "Athlete / sample",
+        "grade": "Performance grade",
+        "advancement_reference": "Advancement call",
+        "final_entry_reference": "Final call",
+        "max_round": "Highest round",
+        "tactical_style": "Tactical style",
+        "rhythm_type": "Rhythm type",
+        "key_lap": "Turning lap",
+        "risk_label": "Risk check",
     },
 }
 
@@ -134,6 +205,15 @@ def t(key: str) -> str:
 
 def lang() -> str:
     return st.session_state.lang
+
+
+def current_task_labels() -> dict[str, str]:
+    return TASK_LABELS[lang()]
+
+
+def localize_display_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    labels = DISPLAY_COL_LABELS[lang()]
+    return frame.rename(columns={col: labels[col] for col in frame.columns if col in labels})
 
 
 def sample_frame(distance: str) -> pd.DataFrame:
@@ -159,9 +239,9 @@ def make_report(distance: str, row: pd.Series, notes: list[str]) -> str:
             f"- 战术风格：{row['tactical_style']}",
             f"- 节奏类型：{row['rhythm_type']}",
             f"- 转折圈：{row['key_lap']}",
-            f"- 异常风险：{row['risk_label']}（{row['risk_score']:.3f}）",
+            f"- 风险状态：{row['risk_label']}（{row['risk_score']:.3f}）",
             "",
-            "## 教练建议",
+            "## 建议区",
         ]
     else:
         lines = [
@@ -191,13 +271,13 @@ def lap_chart(row: pd.Series, distance: str) -> go.Figure:
     times = [float(row[f"lap{i}_time"]) for i in laps]
     pos = [float(row[f"lap{i}_position"]) for i in laps]
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=laps, y=times, mode="lines+markers", name="Lap time", line={"color": "#1f5f8b", "width": 3}))
+    fig.add_trace(go.Scatter(x=laps, y=times, mode="lines+markers", name=t("chart_lap_time"), line={"color": "#1f5f8b", "width": 3}))
     fig.add_trace(
         go.Scatter(
             x=laps,
             y=pos,
             mode="lines+markers",
-            name="Position",
+            name=t("chart_position_trace"),
             yaxis="y2",
             line={"color": "#b24a4a", "width": 3, "dash": "dot"},
         )
@@ -205,9 +285,9 @@ def lap_chart(row: pd.Series, distance: str) -> go.Figure:
     fig.update_layout(
         height=320,
         margin={"l": 30, "r": 35, "t": 20, "b": 30},
-        xaxis={"title": "Lap", "dtick": 1},
-        yaxis={"title": "Seconds"},
-        yaxis2={"title": "Position", "overlaying": "y", "side": "right", "autorange": "reversed", "dtick": 1},
+        xaxis={"title": t("chart_lap"), "dtick": 1},
+        yaxis={"title": t("chart_seconds")},
+        yaxis2={"title": t("chart_position"), "overlaying": "y", "side": "right", "autorange": "reversed", "dtick": 1},
         legend={"orientation": "h", "y": 1.05},
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="#fbfcfe",
@@ -253,22 +333,34 @@ def advice_cards(row: pd.Series, distance: str) -> list[dict[str, str]]:
     grade = str(row.get("grade", ""))
 
     if lang() == "zh":
+        if "正常" in risk:
+            risk_text = "风险状态是“风险正常”。这不是说比赛没有问题，而是说圈速、位置和节奏波动没有明显偏离常见样本。"
+        else:
+            risk_text = "风险状态是“高风险”。模型看到的波动偏大，建议把碰撞、被卡位、突然掉速、换道选择和数据记录都重新核一遍。"
+
+        if adv_prob >= 0.7 and final_prob >= 0.5:
+            decision_text = "这场可以保留当前大框架，训练上重点抠细节。"
+        elif adv_prob >= 0.45:
+            decision_text = "这场有机会，但还不稳，转折圈前后的控位和提速要优先处理。"
+        else:
+            decision_text = "这场晋级压力偏大，先别急着加激进动作，先把起跑、卡位和中后段执行做扎实。"
+
         cards = [
             {
-                "title": "先看结论",
-                "body": f"这场是“{grade}”。晋级判断是“{status_adv(adv_prob)}”，决赛判断是“{status_final(final_prob)}”。",
+                "title": "综合判断",
+                "body": f"这场综合看是“{grade}”，晋级判断为“{status_adv(adv_prob)}”，决赛判断为“{status_final(final_prob)}”。{decision_text}",
             },
             {
                 "title": t("entry_point"),
-                "body": f"风格是“{style}”，节奏是“{rhythm}”。转折圈是“{key_lap}”，意思是这圈最值得回看，因为它最容易决定后面的提速、掉速、超越或被压住。",
+                "body": f"模型给出的风格是“{style}”，节奏是“{rhythm}”。转折圈在“{key_lap}”，这圈最值得回看：很多时候，后面能不能提速、能不能超、会不会被压住，就从这里开始变清楚。",
             },
             {
                 "title": t("risk_point"),
-                "body": "风险正常" if "正常" in risk else "这场风险偏高，建议重点回看碰撞、掉速和换道。",
+                "body": risk_text,
             },
             {
                 "title": t("next_point"),
-                "body": "起速型就别把前两圈烧太满；后程型就把力量留到转折圈后；稳定型就用固定圈速推进。",
+                "body": "训练建议先按一个点收：起速型控制前两圈消耗，后程型把发力留到转折圈后，稳定型减少无谓变速。如果风险偏高，先把线路干净和节奏稳定做好。",
             },
         ]
     else:
@@ -325,26 +417,18 @@ def manual_input(distance: str, use_sample: bool) -> pd.DataFrame:
         athlete = head[0].text_input(
             t("athlete"),
             value=str(defaults.get("athlete_name", "")) if use_sample else "",
-            placeholder=t("fill_hint"),
-            help="可留空",
         )
         round_name = head[1].text_input(
             t("round"),
             value=str(defaults.get("round", "")) if use_sample else "",
-            placeholder=t("fill_hint"),
-            help="可留空",
         )
         qual = head[2].text_input(
             t("qual"),
             value=str(defaults.get("qual_code", "")) if use_sample else "",
-            placeholder=t("fill_hint"),
-            help="可留空",
         )
         total_text = head[3].text_input(
             t("total"),
             value=str(defaults.get("official_total_time", "")) if use_sample else "",
-            placeholder=t("fill_hint"),
-            help="可留空",
         )
 
         st.markdown("**圈速 / 位置**")
@@ -353,10 +437,9 @@ def manual_input(distance: str, use_sample: bool) -> pd.DataFrame:
             for offset, col in enumerate(cols):
                 lap = start + offset
                 with col:
-                    st.markdown(f"**L{lap}**")
+                    st.markdown(f"**第{lap}圈**" if lang() == "zh" else f"**Lap {lap}**")
                     lap_time = st.number_input(
-                        f"L{lap} time",
-                        label_visibility="collapsed",
+                        t("lap_time").format(lap=lap),
                         min_value=0.0,
                         max_value=60.0,
                         value=float(defaults.get(f"lap{lap}_time", 0) or 0) if use_sample else 0.0,
@@ -364,8 +447,7 @@ def manual_input(distance: str, use_sample: bool) -> pd.DataFrame:
                         key=f"time_{distance}_{lap}",
                     )
                     lap_pos = st.number_input(
-                        f"L{lap} pos",
-                        label_visibility="collapsed",
+                        t("lap_position").format(lap=lap),
                         min_value=1,
                         max_value=12,
                         value=int(float(defaults.get(f"lap{lap}_position", 1) or 1)) if use_sample else 1,
@@ -411,7 +493,7 @@ def output_view(output: pd.DataFrame, distance: str) -> None:
     c5.metric(t("style"), row["tactical_style"])
     c6.metric(t("rhythm"), row["rhythm_type"])
     c7.metric(t("key"), row["key_lap"])
-    c8.metric(t("risk"), row["risk_label"], f"{row['risk_score']:.3f}")
+    c8.metric(t("risk"), row["risk_label"], f"{row['risk_score']:.3f}", help=t("risk_help"))
 
     left, right = st.columns([1.15, 0.85], vertical_alignment="top")
     with left:
@@ -432,7 +514,15 @@ def output_view(output: pd.DataFrame, distance: str) -> None:
 
     tab1, tab2 = st.tabs([t("explain"), t("display_columns")])
     with tab1:
-        task = st.selectbox("Task", ["grade", "advancement", "final_entry", "max_round", "tactical_style", "key_lap"], index=0)
+        task_labels = current_task_labels()
+        task_options = ["grade", "advancement", "final_entry", "max_round", "tactical_style", "key_lap"]
+        task_label = st.selectbox(
+            t("explain_task"),
+            [task_labels[item] for item in task_options],
+            index=0,
+            key=f"explain_task_{distance}",
+        )
+        task = next(item for item in task_options if task_labels[item] == task_label)
         global_df = get_service().global_explanation(distance, task, lang())
         local_df = get_service().local_explanation(distance, task, output.head(1), lang())
         g1, g2 = st.columns([1.05, 0.95], vertical_alignment="top")
@@ -445,10 +535,10 @@ def output_view(output: pd.DataFrame, distance: str) -> None:
                     orientation="h",
                     marker={"color": ["#1f5f8b"] * len(global_df)},
                 ))
-                bar.update_layout(height=330, margin={"l": 20, "r": 20, "t": 10, "b": 20}, xaxis_title="Importance")
+                bar.update_layout(height=330, margin={"l": 20, "r": 20, "t": 10, "b": 20}, xaxis_title=t("importance_axis"))
                 st.plotly_chart(bar, use_container_width=True)
             else:
-                st.info("No explanation data found.")
+                st.info(t("no_explain"))
         with g2:
             st.markdown(f"#### {t('local')}")
             for _, item in local_df.head(5).iterrows():
@@ -456,7 +546,7 @@ def output_view(output: pd.DataFrame, distance: str) -> None:
                     f"""
                     <div style="border:1px solid #d7dee8;border-radius:8px;padding:0.7rem 0.85rem;margin-bottom:0.55rem;background:#fff;">
                       <div style="font-size:0.9rem;font-weight:700;margin-bottom:0.15rem">{item['feature_label']}</div>
-                      <div style="font-size:0.88rem;line-height:1.45">本场值：{item['value']:.3f}</div>
+                      <div style="font-size:0.88rem;line-height:1.45">{t('race_value')}：{item['value']:.3f}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -474,7 +564,8 @@ def output_view(output: pd.DataFrame, distance: str) -> None:
             "key_lap",
             "risk_label",
         ]
-        st.dataframe(output[[c for c in show_cols if c in output.columns]], hide_index=True, use_container_width=True)
+        display = output[[c for c in show_cols if c in output.columns]]
+        st.dataframe(localize_display_columns(display), hide_index=True, use_container_width=True)
         st.caption("这些是给教练看的结果列，不是模型内部字段。")
 
     st.download_button(t("report"), make_report(distance, row, [x["body"] for x in advice_cards(row, distance)]), file_name=f"short_track_{distance}_report.md", mime="text/markdown")
@@ -483,8 +574,8 @@ def output_view(output: pd.DataFrame, distance: str) -> None:
 def batch_upload(distance: str) -> None:
     st.subheader(t("batch_help"))
     st.caption(t("input_hint"))
-    st.caption("运动员名、轮次、晋级代码、官方总成绩都可以留空。")
     cols = get_service().required_columns_label_table(distance, lang())
+    cols = cols.rename(columns={"column": t("column_name"), "meaning": t("column_meaning")})
     st.dataframe(cols, hide_index=True, use_container_width=True)
     st.download_button(
         t("template"),
@@ -507,7 +598,7 @@ def batch_upload(distance: str) -> None:
     output = get_service().predict(distance, raw, lang())
     display_cols = [c for c in ["athlete_name", "grade", "advancement_reference", "final_entry_reference", "max_round", "tactical_style", "rhythm_type", "key_lap", "risk_label"] if c in output.columns]
     st.markdown(f"#### {t('display_columns')}")
-    st.dataframe(output[display_cols], hide_index=True, use_container_width=True)
+    st.dataframe(localize_display_columns(output[display_cols]), hide_index=True, use_container_width=True)
     buffer = BytesIO()
     output.to_excel(buffer, index=False)
     st.download_button(
@@ -519,11 +610,12 @@ def batch_upload(distance: str) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Short-Track Coach Workspace", page_icon="ST", layout="wide")
+    st.set_page_config(page_title="短道速滑教练工作台", page_icon="速", layout="wide")
     st.markdown(
         """
         <style>
-        .block-container {padding-top: 1.0rem; padding-bottom: 2rem; max-width: 1380px;}
+        .block-container {padding-top: 1.8rem; padding-bottom: 2rem; max-width: 1380px;}
+        h1 {line-height: 1.25; padding-top: 0.2rem; padding-bottom: 0.15rem;}
         div[data-testid="stMetric"] {
             background: #f8fbfe;
             border: 1px solid #d8e1ea;
@@ -541,9 +633,13 @@ def main() -> None:
 
     if "lang" not in st.session_state:
         st.session_state.lang = "zh"
+    if "single_output" not in st.session_state:
+        st.session_state.single_output = None
+    if "single_output_distance" not in st.session_state:
+        st.session_state.single_output_distance = None
 
     with st.sidebar:
-        choice = st.selectbox("Language / 语言", ["中文", "English"], index=0 if st.session_state.lang == "zh" else 1)
+        choice = st.selectbox(t("language"), ["中文", "英文"], index=0 if st.session_state.lang == "zh" else 1)
         st.session_state.lang = "zh" if choice == "中文" else "en"
         distance = st.radio(t("distance"), ["500m", "1000m", "1500m"], horizontal=True)
         mode = st.radio(t("mode"), [t("single"), t("batch")], horizontal=False)
@@ -567,10 +663,12 @@ def main() -> None:
 
     if mode == t("single"):
         raw = manual_input(distance, use_sample)
-        if raw.empty:
+        if not raw.empty:
+            st.session_state.single_output = get_service().predict(distance, raw, lang())
+            st.session_state.single_output_distance = distance
+        if st.session_state.single_output is None or st.session_state.single_output_distance != distance:
             st.stop()
-        output = get_service().predict(distance, raw, lang())
-        output_view(output, distance)
+        output_view(st.session_state.single_output, distance)
     else:
         batch_upload(distance)
 
