@@ -301,7 +301,7 @@ def main() -> None:
 
     st.title(t("title"))
     st.caption(t("subtitle"))
-    st.warning(t("warning"), icon="!")
+    st.warning(t("warning"))
 
     if mode == t("single"):
         raw = manual_frame(distance, use_sample)
