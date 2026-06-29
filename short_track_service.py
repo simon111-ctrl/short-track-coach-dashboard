@@ -236,15 +236,19 @@ class PredictionService:
         return f"{gender}_{distance}_{task}"
 
     def _local_asset_path(self, raw_path: str) -> Path:
-        path = Path(raw_path)
-        if not path.is_absolute():
-            return self.package_dir / path
-        parts = list(path.parts)
-        for marker in ("models", "reports", "examples", "src", "metrics", "web"):
-            if marker in parts:
-                index = parts.index(marker)
-                return self.package_dir.joinpath(*parts[index:])
-        return path
+        normalized = str(raw_path).replace("\\", "/").strip()
+        if not normalized:
+            raise FileNotFoundError("模型文件路径为空")
+
+        for marker in ("models/", "reports/", "examples/", "src/", "metrics/", "web/"):
+            index = normalized.lower().find(marker)
+            if index != -1:
+                return self.package_dir / normalized[index:]
+
+        path = Path(normalized)
+        if path.is_absolute():
+            return path
+        return self.package_dir / path
 
     @staticmethod
     def required_columns(distance: str) -> list[str]:

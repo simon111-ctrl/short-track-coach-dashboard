@@ -47,6 +47,15 @@ def test_gender_model_routing_uses_separate_assets():
     assert "models\\female\\500m\\grade" in female.meta["model_file"] or "models/female/500m/grade" in female.meta["model_file"]
 
 
+def test_windows_manifest_paths_map_into_package():
+    service = PredictionService(ROOT / "model_package")
+    raw = r"C:\Users\Administrator\Documents\short_track_model_training_20260628\gender_retrain_outputs\models\male\1000m\grade\model.joblib"
+
+    mapped = service._local_asset_path(raw)
+
+    assert mapped == ROOT / "model_package" / "models" / "male" / "1000m" / "grade" / "model.joblib"
+
+
 def test_feature_alignment_reports_missing_and_extra_columns():
     err = FeatureAlignmentError(
         required=["a", "b"],
