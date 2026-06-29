@@ -1,0 +1,16 @@
+﻿gender,distance,model_id,task,feature,importance_mean,importance_std
+female,1000m,female_1000m_risk_detection,risk_detection,mean_lap_time,0.3523444277337711,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,reconstructed_total_time,0.35234352680872966,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,official_total_time_filled,0.35233947705116686,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,position_range,0.31136701185267324,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,position_std,0.29412562415828725,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,lap_time_delta_std,0.28849068158606345,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,lap_time_std,0.24802009339414224,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,lap_time_range,0.23566196828577812,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,lap_time_cv,0.2216334127994414,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,final_position,0.22138053002761193,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,negative_position_loss_sum,0.20218626633774575,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,position_gain_total,0.16717619021266283,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,position_loss_events_count,0.13890003997784464,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,finish_vs_mid_delta,0.09796380233727478,0.0
+female,1000m,female_1000m_risk_detection,risk_detection,finish_vs_previous_delta,0.08234200052385468,0.0

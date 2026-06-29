@@ -1,32 +1,35 @@
-# Short-Track Multi-Distance Coach Workspace
+# Short-Track Elite Feature Predictor
 
-Streamlit web app for coach-facing post-race analysis of short-track speed skating races across 500m, 1000m, and 1500m.
+Streamlit web app for coach-facing short-track speed skating analysis across 500m, 1000m, and 1500m.
 
-The app consumes the exported model handoff package only. It does not retrain models or change model logic.
+This version uses the retrained gender-specific model package. The web app does not retrain models and does not use the old mixed-gender unified model.
 
 ## Features
 
-- Chinese / English interface switch
-- Distance switch for 500m, 1000m, and 1500m
+- Gender selection: male / female
+- Distance selection: 500m, 1000m, 1500m
+- Separate model routing by gender + distance + task
 - Manual single-race input
 - CSV / Excel batch analysis
-- Automatic feature engineering per distance
-- Automatic model routing for grade, advancement, max round, final entry, rhythm cluster, tactical style, key lap, and anomaly risk
-- Coach-facing results, explanations, notes, and downloadable reports
-- Visible model version, training rows, and applicable distance
+- Automatic total-time calculation from lap or segment times
+- Time input formats: `mm:ss:SSS`, `mm:ss`, `m:ss`, `ss`, `ss.sss`, or pure seconds such as `42.318`
+- Feature alignment checks against each selected model's `features.json`
+- Coach-facing result, explanation, advice, chart, and downloadable report
 
 ## Model Package
 
-The deployed model assets live in `model_package/`:
+The deployed assets live in `model_package/`:
 
+- `web_model_manifest.json`
 - `model_manifest.json`
-- `models/<distance>_<task>/model.joblib`
-- `models/<distance>_<task>/features.json`
+- `models/male/<distance>/<task>/model.joblib`
+- `models/male/<distance>/<task>/features.json`
+- `models/female/<distance>/<task>/model.joblib`
+- `models/female/<distance>/<task>/features.json`
 - `src/feature_engineering.py`
-- `reports/model_metrics.csv`
 - `reports/model_explanations.csv`
-- `reports/cluster_centers_<distance>_style_cluster.csv`
-- `examples/`
+- `metrics/gender_distance_model_comparison.csv`
+- `examples/example_input_<gender>_<distance>_<task>.csv`
 
 Large `model.joblib` files are tracked with Git LFS.
 
@@ -39,6 +42,18 @@ python -m streamlit run app.py
 
 Open `http://localhost:8501`.
 
+If dependencies are missing in Anaconda:
+
+```powershell
+conda install -c conda-forge streamlit pandas numpy scikit-learn joblib plotly openpyxl pytest
+```
+
+or:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
 ## Validation
 
 ```powershell
@@ -46,7 +61,7 @@ python -m pytest tests/test_short_track_service.py -q
 python -m py_compile app.py short_track_service.py
 ```
 
-The service test loads the model package, engineers features, and verifies coach outputs from the exported sample input.
+The service tests verify time parsing, gender-specific model loading, feature construction, prediction output, and all 6 gender-distance combinations.
 
 ## Streamlit Cloud
 
@@ -54,12 +69,7 @@ Deploy this repository with:
 
 - Entry point: `app.py`
 - Python dependencies: `requirements.txt`
-- Model assets: included via Git LFS
+- Model assets: the full `model_package/` directory, including `models/male`, `models/female`, `reports`, `metrics`, `examples`, `src`, and manifests
+- Git LFS enabled for `model_package/models/**/model.joblib`
 
-After deployment, verify:
-
-1. Page loads publicly.
-2. Model version is visible in the sidebar.
-3. 500m, 1000m, and 1500m sample inputs produce results.
-4. CSV template download works.
-5. Batch upload returns an Excel analysis file.
+After deployment, verify male and female predictions separately for 500m, 1000m, and 1500m.

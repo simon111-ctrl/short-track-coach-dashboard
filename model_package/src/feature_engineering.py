@@ -253,51 +253,6 @@ def add_distance_features(df: pd.DataFrame, distance: str, laps: int) -> tuple[p
     return out, features
 
 
-def style_cluster_features(features: list[str]) -> list[str]:
-    preferred = [
-        "start_ratio_to_mean",
-        "finish_ratio_to_mean",
-        "finish_vs_mid_delta",
-        "finish_vs_previous_delta",
-        "lap_time_std",
-        "lap_time_cv",
-        "lap_time_delta_std",
-        "start_position",
-        "final_position",
-        "mean_position",
-        "position_std",
-        "position_range",
-        "position_gain_total",
-        "overtake_events_count",
-        "position_loss_events_count",
-        "positive_position_gain_sum",
-        "negative_position_loss_sum",
-        "position_stability_score",
-    ]
-    return [f for f in preferred if f in features]
-
-
-def risk_features(features: list[str]) -> list[str]:
-    preferred = [
-        "reconstructed_total_time",
-        "official_total_time_filled",
-        "mean_lap_time",
-        "lap_time_std",
-        "lap_time_cv",
-        "lap_time_range",
-        "lap_time_delta_std",
-        "position_std",
-        "position_range",
-        "position_loss_events_count",
-        "negative_position_loss_sum",
-        "finish_vs_mid_delta",
-        "finish_vs_previous_delta",
-        "final_position",
-        "position_gain_total",
-    ]
-    return [f for f in preferred if f in features]
-
-
 def feature_sets(distance: str, laps: int, distance_specific: list[str]) -> dict[str, list[str]]:
     lap_time_cols = [f"lap{i}_time" for i in range(1, laps + 1)]
     lap_pos_cols = [f"lap{i}_position" for i in range(1, laps + 1)]
@@ -399,5 +354,99 @@ def feature_sets(distance: str, laps: int, distance_specific: list[str]) -> dict
         "style_cluster_features": style_cluster_features(list(dict.fromkeys(advancement))),
         "risk_detection_features": risk_features(list(dict.fromkeys(advancement))),
     }
+
+
+def assign_grade_label(df: pd.DataFrame) -> pd.Series:
+    labels = pd.qcut(
+        df["reconstructed_total_time"].rank(method="first"),
+        q=4,
+        labels=[3, 2, 1, 0],
+    )
+    return labels.astype(int)
+
+
+def add_extended_labels(df: pd.DataFrame, laps: int) -> pd.DataFrame:
+    out = df.copy()
+    out["round_score"] = out["round"].map(ROUND_SCORES).fillna(0).astype(int)
+    out["max_round_score"] = out.groupby("athlete_event_key")["round_score"].transform("max").astype(int)
+    out["final_entry_label"] = (out["max_round_score"] >= 8).astype(int)
+    out["tactical_style_label"] = assign_tactical_style(out)
+    out["key_lap_label"] = assign_key_lap(out, laps)
+    return out
+
+
+def assign_tactical_style(df: pd.DataFrame) -> pd.Series:
+    out = pd.Series(4, index=df.index, dtype=int)
+    stable_cut = df["position_std"].quantile(0.33)
+    mean_pos_cut = df["mean_position"].quantile(0.50)
+    loss_cut = df["negative_position_loss_sum"].quantile(0.80)
+    range_cut = df["position_range"].quantile(0.80)
+
+    out.loc[(df["start_position"] <= 2) & (df["mean_position"] <= mean_pos_cut)] = 0
+    out.loc[(df["position_gain_total"] >= 2) | (df["positive_position_gain_sum"] >= 3)] = 1
+    out.loc[(df["position_std"] <= stable_cut) & (df["mean_position"] <= mean_pos_cut)] = 2
+    out.loc[(df["negative_position_loss_sum"] >= loss_cut) | (df["position_range"] >= range_cut)] = 3
+    return out
+
+
+def assign_key_lap(df: pd.DataFrame, laps: int) -> pd.Series:
+    scores = []
+    for lap in range(1, laps + 1):
+        time_col = f"lap{lap}_time"
+        time_z = (df[time_col] - df[time_col].median()) / df[time_col].std(ddof=0)
+        score = time_z.abs().fillna(0)
+        if lap > 1:
+            gain_col = f"lap{lap}_position_gain_from_previous"
+            score = score + df[gain_col].abs().fillna(0) * 0.35
+        if lap == laps:
+            score = score + df["finish_vs_previous_delta"].abs().fillna(0) * 0.50
+        scores.append(score.rename(lap))
+    score_df = pd.concat(scores, axis=1)
+    return score_df.idxmax(axis=1).astype(int)
+
+
+def style_cluster_features(features: list[str]) -> list[str]:
+    preferred = [
+        "start_ratio_to_mean",
+        "finish_ratio_to_mean",
+        "finish_vs_mid_delta",
+        "finish_vs_previous_delta",
+        "lap_time_std",
+        "lap_time_cv",
+        "lap_time_delta_std",
+        "start_position",
+        "final_position",
+        "mean_position",
+        "position_std",
+        "position_range",
+        "position_gain_total",
+        "overtake_events_count",
+        "position_loss_events_count",
+        "positive_position_gain_sum",
+        "negative_position_loss_sum",
+        "position_stability_score",
+    ]
+    return [f for f in preferred if f in features]
+
+
+def risk_features(features: list[str]) -> list[str]:
+    preferred = [
+        "reconstructed_total_time",
+        "official_total_time_filled",
+        "mean_lap_time",
+        "lap_time_std",
+        "lap_time_cv",
+        "lap_time_range",
+        "lap_time_delta_std",
+        "position_std",
+        "position_range",
+        "position_loss_events_count",
+        "negative_position_loss_sum",
+        "finish_vs_mid_delta",
+        "finish_vs_previous_delta",
+        "final_position",
+        "position_gain_total",
+    ]
+    return [f for f in preferred if f in features]
 
 

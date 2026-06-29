@@ -1,43 +1,45 @@
-# Handoff To Webapp Thread
+# Handoff To Webapp
 
-This package contains newly trained 10-year short-track models for 500m, 1000m, and 1500m. It includes the previous advancement and grade models plus the newly requested max-round, final-entry, rhythm-cluster, tactical-style, key-lap, and risk-detection models. It is for model consumption only; no web deployment work is included.
+This package contains the retrained gender-specific short-track models for 500m, 1000m, and 1500m.
 
-Use `model_manifest.json` as the entry point. Each model folder contains `model.joblib` and `features.json`.
+The app must not use the old mixed-gender model package. It must select models by:
 
-Webapp integration steps:
-1. Load the proper distance/task model from `models/<distance>_<task>/model.joblib`.
-2. Recreate features with `src/feature_engineering.py` or mirror the same formulas.
-3. Select the exact feature order from `features.json`.
-4. For classifiers, return predicted label and class probabilities.
-5. For `style_cluster`, return the cluster ID and optionally use the cluster center table in `reports/`.
-6. For `risk_detection`, return `risk_score` from `-decision_function(X)` and `risk_label` from `predict(X) == -1`.
+1. `gender`: `male` or `female`
+2. `distance`: `500m`, `1000m`, or `1500m`
+3. `task`: `advancement`, `grade`, `max_round`, `final_entry`, `style_cluster`, `tactical_style`, `key_lap`, or `risk_detection`
 
-Model tasks included per distance:
-- `advancement`: official Qual-based advancement probability.
-- `grade`: quartile-based performance grade with leakage-controlled features.
-- `max_round`: predicted highest round score reached in the same event.
-- `final_entry`: probability of reaching Ranking Finals / Final B / Finals / Final A.
-- `style_cluster`: unsupervised rhythm and pacing cluster.
-- `tactical_style`: rule-trained tactical style class.
-- `key_lap`: rule-trained key lap class.
-- `risk_detection`: unsupervised anomaly/risk model.
+Model folders use:
+
+```text
+models/<gender>/<distance>/<task>/model.joblib
+models/<gender>/<distance>/<task>/features.json
+```
+
+Use `web_model_manifest.json` or `model_manifest.json` as the entry point. The manifest contains `gender`, `distance`, `task`, `n_training_rows`, `feature_columns`, and report paths for each model.
 
 Important constraints:
-- Do not send athlete name or athlete ID into the model. They are metadata only.
-- Do not send `qual` into the model. It is label source only.
-- Grade models intentionally avoid total-time leakage features.
-- Advancement models are post-race/reference models using full lap information; they are not early-race live predictors.
-- `tactical_style` and `key_lap` use rule-generated labels, not official labels.
-- `style_cluster` and `risk_detection` are unsupervised models and do not have accuracy/F1 metrics.
 
-Files the webapp thread needs:
-- `model_manifest.json`
-- `models/`
-- `src/feature_engineering.py`
-- `feature_lists_by_distance.json`
-- `input_fields.md`
-- `label_rules.md`
-- `reports/model_metrics.csv`
-- `reports/model_explanations.csv`
-- `reports/cluster_centers_<distance>_style_cluster.csv`
-- `examples/`
+- Gender is a model selector, not a regular model feature.
+- Do not mix male and female models or reference statistics.
+- Do not send athlete name, round, qual code, source URL, or gender into the model feature matrix unless a selected `features.json` explicitly requires it.
+- Feature order must exactly follow the selected `features.json`.
+- Grade models intentionally exclude total-time leakage features.
+- `style_cluster` and `risk_detection` are unsupervised models and do not have accuracy/F1 metrics.
+- Prediction advice should state that the result is compared only with the selected gender's reference group.
+
+Files required for Streamlit deployment:
+
+- `app.py`
+- `short_track_service.py`
+- `requirements.txt`
+- `model_package/web_model_manifest.json`
+- `model_package/model_manifest.json`
+- `model_package/models/male/**`
+- `model_package/models/female/**`
+- `model_package/src/feature_engineering.py`
+- `model_package/feature_lists_by_distance.json`
+- `model_package/reports/model_explanations.csv`
+- `model_package/metrics/gender_distance_model_comparison.csv`
+- `model_package/examples/example_input_<gender>_<distance>_advancement.csv`
+
+Large `model.joblib` files should remain tracked with Git LFS.

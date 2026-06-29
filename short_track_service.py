@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import joblib
 import numpy as np
@@ -12,6 +13,21 @@ import pandas as pd
 
 
 DISTANCE_LAPS = {"500m": 5, "1000m": 9, "1500m": 14}
+GENDERS = {"male", "female"}
+GENDER_ALIASES = {
+    "男": "male",
+    "男子": "male",
+    "male": "male",
+    "men": "male",
+    "man": "male",
+    "m": "male",
+    "女": "female",
+    "女子": "female",
+    "female": "female",
+    "women": "female",
+    "woman": "female",
+    "f": "female",
+}
 TASKS = [
     "grade",
     "advancement",
@@ -62,41 +78,9 @@ RHYTHM_LABELS = {
     },
 }
 
-RHYTHM_HINTS = {
-    "500m": {
-        0: {"zh": "前段起速快，节奏偏控位。", "en": "Fast opening with controlled positioning."},
-        1: {"zh": "起速积极，同时有一定反击能力。", "en": "Aggressive start with counter ability."},
-        2: {"zh": "前快后掉，后半程掉速较明显。", "en": "Fast early, then a visible late fade."},
-        3: {"zh": "节奏波动大，风险高。", "en": "Large pace swings and high risk."},
-    },
-    "1000m": {
-        0: {"zh": "前段偏保守，末段有一定回落。", "en": "Conservative opening with late fade."},
-        1: {"zh": "适合后程提速和追击。", "en": "Built for late acceleration and chase."},
-        2: {"zh": "整体稳定，适合控节奏推进。", "en": "Stable overall and suited to controlled pace."},
-        3: {"zh": "波动大，容易被节奏打乱。", "en": "Highly variable and easy to disrupt."},
-    },
-    "1500m": {
-        0: {"zh": "整体均衡，守位能力较好。", "en": "Balanced overall with solid position holding."},
-        1: {"zh": "开局更积极，但后程保持不足。", "en": "Aggressive early, but less stable late."},
-        2: {"zh": "前中后节奏衔接更顺。", "en": "Better rhythm linkage across the race."},
-        3: {"zh": "长距离内波动过大，风险很高。", "en": "Too much variance over the long race."},
-    },
-}
-
-ADV_LABELS = {
-    "zh": {0: "晋级压力大", 1: "有晋级机会"},
-    "en": {0: "Needs review", 1: "Likely to advance"},
-}
-
-FINAL_LABELS = {
-    "zh": {0: "暂时难进决赛", 1: "有机会进决赛"},
-    "en": {0: "Final path uncertain", 1: "Final path likely"},
-}
-
-RISK_LABELS = {
-    "zh": {"Normal": "风险正常", "High risk": "高风险"},
-    "en": {"Normal": "Normal", "High risk": "High risk"},
-}
+ADV_LABELS = {"zh": {0: "晋级压力大", 1: "有晋级机会"}, "en": {0: "Needs review", 1: "Likely to advance"}}
+FINAL_LABELS = {"zh": {0: "暂时难进决赛", 1: "有机会进决赛"}, "en": {0: "Final path uncertain", 1: "Final path likely"}}
+RISK_LABELS = {"zh": {"Normal": "风险正常", "High risk": "高风险"}, "en": {"Normal": "Normal", "High risk": "High risk"}}
 
 ROUND_LABELS = {
     "zh": {
@@ -124,93 +108,41 @@ ROUND_LABELS = {
 }
 
 FEATURE_LABELS = {
-    "zh": {
-        "official_total_time_filled": "官方总成绩",
-        "reconstructed_total_time": "圈速重建总成绩",
-        "mean_lap_time": "平均圈速",
-        "lap_time_std": "圈速波动",
-        "lap_time_cv": "圈速稳定度",
-        "lap_time_range": "最快最慢圈差",
-        "start_ratio_to_mean": "起速相对平均",
-        "finish_ratio_to_mean": "末段相对平均",
-        "finish_vs_mid_delta": "末段对中段变化",
-        "finish_vs_previous_delta": "末圈对前一圈变化",
-        "start_position": "起跑位置",
-        "final_position": "终点位置",
-        "mean_position": "平均位置",
-        "position_std": "位置波动",
-        "position_range": "位置区间",
-        "position_gain_total": "总位置提升",
-        "overtake_events_count": "超越次数",
-        "position_loss_events_count": "被超越次数",
-        "positive_position_gain_sum": "有效追位总和",
-        "negative_position_loss_sum": "掉位总和",
-        "position_stability_score": "位置稳定度",
-        "lap_time_delta_std": "圈速变化波动",
-        "first_turn_position": "首弯位置",
-        "early_position_gain_lap1_2": "前两圈追位",
-        "explosive_stability_lap1_3_std": "前段爆发稳定度",
-        "last_lap_conversion_delta": "末圈转换",
-        "late_position_conversion": "末段追位转换",
-        "front_mid_pace_mean_lap2_5": "前中段平均圈速",
-        "mid_position_control_mean_lap3_6": "中段控位均值",
-        "acceleration_lap6_vs_lap5": "第六圈相对第五圈",
-        "speed_hold_lap6_8_std": "中后段速度稳定度",
-        "sprint_reserve_lap9_vs_lap7_8": "末段冲刺储备",
-        "late_position_gain_lap7_9": "末段位置提升",
-        "long_pace_early_mean_lap2_5": "前段平均圈速",
-        "long_pace_mid_mean_lap6_10": "中段平均圈速",
-        "long_pace_late_mean_lap11_14": "后段平均圈速",
-        "mid_energy_saving_delta": "中段蓄力差",
-        "pace_layering_range": "分段节奏跨度",
-        "attack_gain_lap10_12": "中后段发起追击",
-        "back_end_capacity_lap11_14_vs_mid": "后程储备",
-        "late_position_gain_lap10_14": "末段位置提升",
-    },
-    "en": {
-        "official_total_time_filled": "Official total time",
-        "reconstructed_total_time": "Reconstructed total time",
-        "mean_lap_time": "Average lap time",
-        "lap_time_std": "Lap-time variability",
-        "lap_time_cv": "Lap-time stability",
-        "lap_time_range": "Fastest-slowest gap",
-        "start_ratio_to_mean": "Start vs average",
-        "finish_ratio_to_mean": "Finish vs average",
-        "finish_vs_mid_delta": "Finish vs middle section",
-        "finish_vs_previous_delta": "Final lap vs previous",
-        "start_position": "Start position",
-        "final_position": "Finish position",
-        "mean_position": "Average position",
-        "position_std": "Position volatility",
-        "position_range": "Position range",
-        "position_gain_total": "Total position gain",
-        "overtake_events_count": "Overtakes",
-        "position_loss_events_count": "Position losses",
-        "positive_position_gain_sum": "Total gains",
-        "negative_position_loss_sum": "Total losses",
-        "position_stability_score": "Position stability",
-        "lap_time_delta_std": "Lap-change volatility",
-        "first_turn_position": "First-turn position",
-        "early_position_gain_lap1_2": "Early position gain",
-        "explosive_stability_lap1_3_std": "Early explosive stability",
-        "last_lap_conversion_delta": "Final-lap conversion",
-        "late_position_conversion": "Late position conversion",
-        "front_mid_pace_mean_lap2_5": "Front-mid pace",
-        "mid_position_control_mean_lap3_6": "Mid-race position control",
-        "acceleration_lap6_vs_lap5": "Lap 6 vs lap 5",
-        "speed_hold_lap6_8_std": "Mid-late pace stability",
-        "sprint_reserve_lap9_vs_lap7_8": "Sprint reserve",
-        "late_position_gain_lap7_9": "Late position gain",
-        "long_pace_early_mean_lap2_5": "Early long-race pace",
-        "long_pace_mid_mean_lap6_10": "Mid-race pace",
-        "long_pace_late_mean_lap11_14": "Late-race pace",
-        "mid_energy_saving_delta": "Mid-race saving delta",
-        "pace_layering_range": "Pace layering range",
-        "attack_gain_lap10_12": "Attack gain",
-        "back_end_capacity_lap11_14_vs_mid": "Back-end capacity",
-        "late_position_gain_lap10_14": "Late position gain",
-    },
+    "official_total_time_filled": {"zh": "官方总成绩", "en": "Official total time"},
+    "reconstructed_total_time": {"zh": "自动求和总成绩", "en": "Calculated total time"},
+    "mean_lap_time": {"zh": "平均圈速", "en": "Average lap time"},
+    "lap_time_std": {"zh": "圈速波动", "en": "Lap-time variability"},
+    "lap_time_cv": {"zh": "圈速稳定性", "en": "Lap-time stability"},
+    "lap_time_range": {"zh": "最快最慢圈差", "en": "Fastest-slowest gap"},
+    "start_ratio_to_mean": {"zh": "起速相对平均", "en": "Start vs average"},
+    "finish_ratio_to_mean": {"zh": "末段相对平均", "en": "Finish vs average"},
+    "finish_vs_mid_delta": {"zh": "末段对中段变化", "en": "Finish vs middle"},
+    "finish_vs_previous_delta": {"zh": "末圈对前一圈变化", "en": "Final lap vs previous"},
+    "start_position": {"zh": "起始位置", "en": "Start position"},
+    "final_position": {"zh": "终点位置", "en": "Finish position"},
+    "mean_position": {"zh": "平均位置", "en": "Average position"},
+    "position_std": {"zh": "位置波动", "en": "Position volatility"},
+    "position_range": {"zh": "位置区间", "en": "Position range"},
+    "position_gain_total": {"zh": "总位置提升", "en": "Total position gain"},
+    "overtake_events_count": {"zh": "超越次数", "en": "Overtakes"},
+    "position_loss_events_count": {"zh": "掉位次数", "en": "Position losses"},
+    "lap_time_delta_std": {"zh": "圈速变化波动", "en": "Lap-change volatility"},
 }
+
+
+class FeatureAlignmentError(ValueError):
+    def __init__(self, required: Iterable[str], current: Iterable[str], missing: Iterable[str], extra: Iterable[str]):
+        self.required = list(required)
+        self.current = list(current)
+        self.missing = list(missing)
+        self.extra = list(extra)
+        super().__init__(
+            "Feature fields do not match the selected model.\n"
+            f"Required fields: {self.required}\n"
+            f"Current fields: {self.current}\n"
+            f"Missing fields: {self.missing}\n"
+            f"Extra fields: {self.extra}"
+        )
 
 
 @dataclass(frozen=True)
@@ -218,6 +150,56 @@ class ModelAsset:
     model: Any
     features: list[str]
     meta: dict[str, Any]
+
+
+def normalize_gender(value: str) -> str:
+    text = str(value).strip().lower()
+    gender = GENDER_ALIASES.get(text)
+    if gender not in GENDERS:
+        raise ValueError("请选择性别：男 / Male / Men 或 女 / Female / Women")
+    return gender
+
+
+def parse_time_to_seconds(value: Any) -> float:
+    if value is None or (isinstance(value, float) and np.isnan(value)):
+        return np.nan
+    if isinstance(value, (int, float, np.integer, np.floating)):
+        return float(value)
+    text = str(value).strip()
+    if not text:
+        return np.nan
+    text = text.replace(",", ".")
+    if text.upper() in {"DNS", "DNF", "PEN", "YC", "DQ", "DSQ", "WDR"}:
+        return np.nan
+    parts = text.split(":")
+    try:
+        if len(parts) == 3:
+            minutes = int(parts[0])
+            seconds = int(parts[1])
+            millis = int(parts[2].ljust(3, "0")[:3])
+            if seconds >= 60:
+                raise ValueError
+            return minutes * 60 + seconds + millis / 1000
+        if len(parts) == 2:
+            minutes = int(parts[0])
+            seconds = float(parts[1])
+            if seconds >= 60:
+                raise ValueError
+            return minutes * 60 + seconds
+        if len(parts) == 1:
+            return float(text)
+    except ValueError as exc:
+        raise ValueError(f"成绩格式错误：{value}。请使用 mm:ss:SSS、mm:ss、ss 或 ss.sss。") from exc
+    raise ValueError(f"成绩格式错误：{value}。请使用 mm:ss:SSS、mm:ss、ss 或 ss.sss。")
+
+
+def format_seconds_mmss(seconds: float) -> str:
+    if seconds is None or np.isnan(seconds):
+        return ""
+    total_ms = int(round(float(seconds) * 1000))
+    minutes, remainder = divmod(total_ms, 60_000)
+    whole_seconds, millis = divmod(remainder, 1000)
+    return f"{minutes:02d}:{whole_seconds:02d}:{millis:03d}"
 
 
 class PredictionService:
@@ -229,123 +211,163 @@ class PredictionService:
         import feature_engineering as fe
 
         self.fe = fe
-        self.manifest = json.loads((self.package_dir / "model_manifest.json").read_text(encoding="utf-8"))
-        self.explanations = pd.read_csv(self.package_dir / "reports" / "model_explanations.csv")
-        self.metrics = pd.read_csv(self.package_dir / "reports" / "model_metrics.csv")
+        manifest_path = self.package_dir / "web_model_manifest.json"
+        if not manifest_path.exists():
+            manifest_path = self.package_dir / "model_manifest.json"
+        self.manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        self.explanations = self._read_csv_if_exists(self.package_dir / "reports" / "model_explanations.csv")
+        self.metrics = self._read_csv_if_exists(self.package_dir / "metrics" / "gender_distance_model_comparison.csv")
         self._asset_cache: dict[str, ModelAsset] = {}
+
+    @staticmethod
+    def _read_csv_if_exists(path: Path) -> pd.DataFrame:
+        return pd.read_csv(path) if path.exists() else pd.DataFrame()
 
     @staticmethod
     def _lang(value: str) -> str:
         return "zh" if value not in {"zh", "en"} else value
 
+    def model_id(self, distance: str, gender: str, task: str) -> str:
+        gender = normalize_gender(gender)
+        if distance not in DISTANCE_LAPS:
+            raise ValueError(f"不支持的距离：{distance}")
+        if task not in TASKS:
+            raise ValueError(f"不支持的模型任务：{task}")
+        return f"{gender}_{distance}_{task}"
+
+    def _local_asset_path(self, raw_path: str) -> Path:
+        path = Path(raw_path)
+        if not path.is_absolute():
+            return self.package_dir / path
+        parts = list(path.parts)
+        for marker in ("models", "reports", "examples", "src", "metrics", "web"):
+            if marker in parts:
+                index = parts.index(marker)
+                return self.package_dir.joinpath(*parts[index:])
+        return path
+
     @staticmethod
     def required_columns(distance: str) -> list[str]:
         laps = DISTANCE_LAPS[distance]
         return (
-            ["athlete_name", "distance", "round", "qual_code", "official_total_time"]
+            ["athlete_name", "gender", "distance", "round", "qual_code", "official_total_time"]
             + [f"lap{i}_time" for i in range(1, laps + 1)]
             + [f"lap{i}_position" for i in range(1, laps + 1)]
         )
 
     def required_columns_label_table(self, distance: str, value_lang: str) -> pd.DataFrame:
         value_lang = self._lang(value_lang)
-        rows = []
-        base = {
+        names = {
             "athlete_name": {"zh": "运动员 / 样本名", "en": "Athlete / sample name"},
+            "gender": {"zh": "性别", "en": "Gender"},
             "distance": {"zh": "距离", "en": "Distance"},
             "round": {"zh": "轮次", "en": "Round"},
-            "qual_code": {"zh": "晋级代码", "en": "Qualification code"},
-            "official_total_time": {"zh": "官方总成绩", "en": "Official total time"},
+            "qual_code": {"zh": "晋级标记", "en": "Qualification code"},
+            "official_total_time": {"zh": "官方总成绩，可留空", "en": "Official total time, optional"},
         }
-        for col in ["athlete_name", "distance", "round", "qual_code", "official_total_time"]:
-            rows.append({"column": col, "meaning": base[col][value_lang]})
+        rows = [{"column": col, "meaning": names[col][value_lang]} for col in names]
         for lap in range(1, DISTANCE_LAPS[distance] + 1):
-            rows.append({"column": f"lap{lap}_time", "meaning": {"zh": f"第{lap}圈成绩", "en": f"Lap {lap} time"}[value_lang]})
+            rows.append({"column": f"lap{lap}_time", "meaning": {"zh": f"第{lap}圈成绩，秒数", "en": f"Lap {lap} time, seconds"}[value_lang]})
             rows.append({"column": f"lap{lap}_position", "meaning": {"zh": f"第{lap}圈位置", "en": f"Lap {lap} position"}[value_lang]})
         return pd.DataFrame(rows)
 
-    def load_asset(self, distance: str, task: str) -> ModelAsset:
-        model_id = f"{distance}_{task}"
+    def load_asset(self, distance: str, gender: str, task: str) -> ModelAsset:
+        model_id = self.model_id(distance, gender, task)
         if model_id in self._asset_cache:
             return self._asset_cache[model_id]
-        meta = self.manifest["models"][model_id]
-        model = joblib.load(self.package_dir / meta["model_file"])
-        features = json.loads((self.package_dir / meta["features_file"]).read_text(encoding="utf-8"))
-        asset = ModelAsset(model=model, features=features, meta=meta)
+        if model_id not in self.manifest.get("models", {}):
+            raise FileNotFoundError(f"模型清单中找不到：{model_id}")
+
+        meta = dict(self.manifest["models"][model_id])
+        model_path = self._local_asset_path(meta["model_file"])
+        features_path = self._local_asset_path(meta["features_file"])
+        if not model_path.exists():
+            raise FileNotFoundError(f"模型文件不存在：{model_path}")
+        if not features_path.exists():
+            raise FileNotFoundError(f"特征文件不存在：{features_path}")
+        model = joblib.load(model_path)
+        features = json.loads(features_path.read_text(encoding="utf-8"))
+        if meta.get("feature_columns") and list(meta["feature_columns"]) != list(features):
+            raise FeatureAlignmentError(meta["feature_columns"], features, [], [])
+        asset = ModelAsset(model=model, features=list(features), meta=meta)
         self._asset_cache[model_id] = asset
         return asset
 
-    def _grade_label(self, value: int, value_lang: str) -> str:
-        return (GRADE_ZH if self._lang(value_lang) == "zh" else GRADE_EN).get(int(value), str(value))
-
-    def _style_label(self, code: str, value_lang: str) -> str:
-        labels = STYLE_ZH if self._lang(value_lang) == "zh" else STYLE_EN
-        return labels.get(code, code.replace("_", " ").title())
-
-    def _rhythm_label(self, distance: str, cluster: int, value_lang: str) -> str:
-        return RHYTHM_LABELS.get(distance, {}).get(int(cluster), {}).get(self._lang(value_lang), f"Cluster {cluster}")
-
-    def _rhythm_hint(self, distance: str, cluster: int, value_lang: str) -> str:
-        return RHYTHM_HINTS.get(distance, {}).get(int(cluster), {}).get(self._lang(value_lang), "")
-
-    def _round_label(self, value: int, value_lang: str) -> str:
-        return ROUND_LABELS.get(self._lang(value_lang), {}).get(int(value), str(value))
-
-    def _risk_label(self, code: str, value_lang: str) -> str:
-        return RISK_LABELS.get(self._lang(value_lang), {}).get(code, code)
-
-    def _adv_label(self, probability: float, value_lang: str) -> str:
-        return ADV_LABELS[self._lang(value_lang)][1 if probability >= 0.5 else 0]
-
-    def _final_label(self, probability: float, value_lang: str) -> str:
-        return FINAL_LABELS[self._lang(value_lang)][1 if probability >= 0.5 else 0]
-
-    def _feature_label(self, feature: str, value_lang: str) -> str:
-        return FEATURE_LABELS[self._lang(value_lang)].get(feature, feature.replace("_", " "))
-
-    def prepare_features(self, distance: str, raw: pd.DataFrame) -> pd.DataFrame:
+    def prepare_features(self, distance: str, gender: str, raw: pd.DataFrame) -> pd.DataFrame:
+        gender = normalize_gender(gender)
         laps = DISTANCE_LAPS[distance]
         data = raw.copy()
+        data["gender"] = gender
         data["distance"] = distance
         for col in ["athlete_name", "round", "qual_code"]:
             if col not in data:
                 data[col] = ""
+
         for lap in range(1, laps + 1):
-            data[f"lap{lap}_time"] = pd.to_numeric(data[f"lap{lap}_time"], errors="coerce")
-            data[f"lap{lap}_position"] = pd.to_numeric(data[f"lap{lap}_position"], errors="coerce")
+            time_col = f"lap{lap}_time"
+            pos_col = f"lap{lap}_position"
+            if time_col not in data or pos_col not in data:
+                raise ValueError(f"缺少必填字段：{time_col if time_col not in data else pos_col}")
+            data[time_col] = data[time_col].map(parse_time_to_seconds)
+            data[pos_col] = pd.to_numeric(data[pos_col], errors="coerce")
+
         lap_times = [f"lap{i}_time" for i in range(1, laps + 1)]
+        lap_positions = [f"lap{i}_position" for i in range(1, laps + 1)]
+        if data[lap_times + lap_positions].isna().any(axis=None):
+            missing = data[lap_times + lap_positions].columns[data[lap_times + lap_positions].isna().any()].tolist()
+            raise ValueError(f"请补全每圈成绩和每圈位置。缺失或格式错误字段：{', '.join(missing)}")
+
         data["reconstructed_total_time"] = data[lap_times].sum(axis=1)
+        data["calculated_total_time"] = data["reconstructed_total_time"]
+        data["calculated_total_time_display"] = data["calculated_total_time"].map(format_seconds_mmss)
         if "official_total_time" not in data:
             data["official_total_time"] = np.nan
-        data["official_total_time"] = pd.to_numeric(data["official_total_time"], errors="coerce")
+        data["official_total_time"] = data["official_total_time"].map(parse_time_to_seconds)
         data["official_total_time_filled"] = data["official_total_time"].fillna(data["reconstructed_total_time"])
         data["total_time_was_missing"] = data["official_total_time"].isna().astype(int)
         data["official_total_delta"] = data["official_total_time"] - data["reconstructed_total_time"]
         data["official_total_abs_delta"] = data["official_total_delta"].abs()
         data["timing_consistent"] = (data["official_total_time"].isna() | (data["official_total_abs_delta"] <= 0.10)).astype(int)
+
         data = self.fe.add_common_features(data, laps)
         data, _ = self.fe.add_distance_features(data, distance, laps)
         return data
 
-    def predict(self, distance: str, raw: pd.DataFrame, value_lang: str = "zh") -> pd.DataFrame:
+    def align_features(self, engineered: pd.DataFrame, asset: ModelAsset) -> pd.DataFrame:
+        required = list(asset.features)
+        current = list(engineered.columns)
+        missing = [col for col in required if col not in engineered.columns]
+        extra = [col for col in engineered.columns if col not in required]
+        if missing:
+            raise FeatureAlignmentError(required, current, missing, extra)
+        return engineered.loc[:, required]
+
+    def predict(self, distance: str, gender: str, raw: pd.DataFrame, value_lang: str = "zh") -> pd.DataFrame:
         value_lang = self._lang(value_lang)
-        engineered = self.prepare_features(distance, raw)
+        gender = normalize_gender(gender)
+        engineered = self.prepare_features(distance, gender, raw)
         result = raw.reset_index(drop=True).copy()
+        result["gender"] = gender
+        result["distance"] = distance
+        result["calculated_total_time"] = engineered["calculated_total_time"].to_numpy()
+        result["calculated_total_time_display"] = engineered["calculated_total_time_display"].to_numpy()
 
         for task in TASKS:
-            asset = self.load_asset(distance, task)
-            X = engineered[asset.features]
+            asset = self.load_asset(distance, gender, task)
+            X = self.align_features(engineered, asset)
             pred = np.asarray(asset.model.predict(X)).reshape(-1)
 
             if task == "risk_detection":
-                result["risk_score"] = -asset.model.decision_function(X)
+                if hasattr(asset.model, "decision_function"):
+                    result["risk_score"] = -asset.model.decision_function(X)
+                else:
+                    result["risk_score"] = np.where(pred == -1, 1.0, 0.0)
                 result["risk_label"] = np.where(pred == -1, self._risk_label("High risk", value_lang), self._risk_label("Normal", value_lang))
                 continue
 
             if task == "style_cluster":
                 result["rhythm_cluster"] = pred.astype(int)
                 result["rhythm_type"] = [self._rhythm_label(distance, int(x), value_lang) for x in pred]
-                result["rhythm_hint"] = [self._rhythm_hint(distance, int(x), value_lang) for x in pred]
                 continue
 
             probabilities = self._positive_or_winning_probability(asset.model, X, pred)
@@ -375,100 +397,125 @@ class PredictionService:
 
         return result
 
-    def global_explanation(self, distance: str, task: str, value_lang: str = "zh", limit: int = 8) -> pd.DataFrame:
+    def reference_stats(self, distance: str, gender: str) -> dict[str, Any]:
+        return self.manifest.get("reference_statistics", {}).get(f"{normalize_gender(gender)}_{distance}", {})
+
+    def gender_distance_summary(self, distance: str, gender: str) -> dict[str, Any]:
+        model = self.manifest.get("models", {}).get(self.model_id(distance, gender, "grade"), {})
+        stats = self.reference_stats(distance, gender)
+        return {"model": model, "stats": stats}
+
+    def global_explanation(self, distance: str, gender: str, task: str, value_lang: str = "zh", limit: int = 8) -> pd.DataFrame:
         value_lang = self._lang(value_lang)
-        model_id = f"{distance}_{task}"
+        model_id = self.model_id(distance, gender, task)
+        if self.explanations.empty:
+            return pd.DataFrame(columns=["feature", "feature_label", "importance_mean"])
         table = self.explanations[self.explanations["model_id"] == model_id].copy()
         if table.empty:
             return pd.DataFrame(columns=["feature", "feature_label", "importance_mean"])
         table["feature_label"] = table["feature"].map(lambda name: self._feature_label(name, value_lang))
         return table.sort_values("importance_mean", ascending=False).head(limit)
 
-    def local_explanation(self, distance: str, task: str, raw: pd.DataFrame, value_lang: str = "zh", limit: int = 6) -> pd.DataFrame:
-        value_lang = self._lang(value_lang)
-        engineered = self.prepare_features(distance, raw).reset_index(drop=True)
-        global_top = self.global_explanation(distance, task, value_lang, limit)
+    def local_explanation(self, distance: str, gender: str, task: str, raw: pd.DataFrame, value_lang: str = "zh", limit: int = 6) -> pd.DataFrame:
+        engineered = self.prepare_features(distance, gender, raw).reset_index(drop=True)
+        global_top = self.global_explanation(distance, gender, task, value_lang, limit)
         rows = []
         for feature in global_top["feature"]:
             if feature in engineered:
-                rows.append(
-                    {
-                        "feature": feature,
-                        "feature_label": self._feature_label(feature, value_lang),
-                        "value": float(engineered.loc[0, feature]),
-                    }
-                )
+                rows.append({"feature": feature, "feature_label": self._feature_label(feature, value_lang), "value": float(engineered.loc[0, feature])})
         return pd.DataFrame(rows)
 
-    def coach_notes(self, distance: str, prediction: pd.Series, value_lang: str = "zh") -> list[str]:
+    def generate_advice(self, row: pd.Series, distance: str, gender: str, value_lang: str = "zh") -> list[dict[str, str]]:
         value_lang = self._lang(value_lang)
-        notes: list[str] = []
-        adv = float(prediction.get("advancement_probability", 0))
-        final = float(prediction.get("final_entry_probability", 0))
-        risk = str(prediction.get("risk_label", self._risk_label("Normal", value_lang)))
-        style = str(prediction.get("tactical_style", ""))
-        rhythm = str(prediction.get("rhythm_type", ""))
-        key_lap = str(prediction.get("key_lap", ""))
-        grade = str(prediction.get("grade", ""))
+        gender = normalize_gender(gender)
+        stats = self.reference_stats(distance, gender)
+        total = float(row.get("calculated_total_time", np.nan))
+        total_display = row.get("calculated_total_time_display", format_seconds_mmss(total))
+        fast_q25 = stats.get("elite_reference_fast_q25_seconds")
+        median = stats.get("reconstructed_total_time_median")
+        grade_code = int(row.get("grade_code", -1))
+        gender_text = "男性" if gender == "male" else "女性"
+        if value_lang == "en":
+            gender_text = "male" if gender == "male" else "female"
 
         if value_lang == "zh":
-            notes.append(f"当前结果是{grade}，晋级参考{self._adv_label(adv, value_lang)}，决赛通道{self._final_label(final, value_lang)}。")
-            if adv >= 0.7:
-                notes.append("晋级信号偏强，当前结构可以继续保留，但需要盯紧细节。")
-            elif adv >= 0.45:
-                notes.append("晋级信号处在中间带，重点看位置控制和转折圈处理。")
+            if fast_q25 is not None and total <= float(fast_q25):
+                gap = f"自动总成绩 {total_display} 已进入当前{gender_text}{distance}样本的快速四分位参考区间。"
+            elif median is not None and total <= float(median):
+                gap = f"自动总成绩 {total_display} 快于当前{gender_text}{distance}样本中位数，接近精英参考区间。"
             else:
-                notes.append("晋级信号偏弱，优先检查起跑、卡位和中后段执行。")
-            if final >= 0.5:
-                notes.append("决赛通道偏强，可以考虑更积极的比赛计划。")
-            else:
-                notes.append("决赛通道不稳，先保证可重复的执行质量，再考虑激进超越。")
-            if risk == "高风险":
-                notes.append("异常风险偏高，建议回看碰撞、节奏断裂、换道和数据质量。")
-            if "起速" in rhythm:
-                notes.append("起速偏快的比赛，前两圈不要把体能一次性打满，保留中后段反应空间。")
-            elif "后程" in rhythm:
-                notes.append("后程型比赛，前段以占位为主，真正发力点放在转折圈前后。")
-            elif "稳控" in rhythm or "均衡" in rhythm:
-                notes.append("节奏较稳，适合用固定圈速推进，减少无谓的节奏切换。")
-            elif "波动" in rhythm:
-                notes.append("波动明显，先处理节奏稳定和线路干净，再谈进一步提速。")
-            if "前快后掉" in rhythm:
-                notes.append("前快后掉的特征比较明显，建议把前段冲刺改成更平滑的推进。")
-            if "追赶" in rhythm:
-                notes.append("追赶型比赛，关键是把差距留到最后可处理的范围，不要过早透支。")
-            notes.append(f"当前战术风格：{style}。转折圈：{key_lap}。")
-            notes.append(f"这是赛后的{distance}参考结果，建议结合录像和教练判断一起看。")
+                gap = f"自动总成绩 {total_display} 仍慢于当前{gender_text}{distance}样本中位参考，需要结合圈速结构继续提升。"
+            return [
+                {
+                    "title": "性别模型说明",
+                    "body": f"本次只调用{gender_text}{distance}分组模型，预测只和对应性别样本的精英特征比较，不与另一性别模型互相比较。",
+                },
+                {
+                    "title": "成绩位置",
+                    "body": f"{gap} 模型给出的成绩等级为“{row.get('grade', '')}”，晋级参考为“{row.get('advancement_reference', '')}”。",
+                },
+                {
+                    "title": "分段表现",
+                    "body": f"关键圈为{row.get('key_lap', '')}，节奏类型为“{row.get('rhythm_type', '')}”，战术风格为“{row.get('tactical_style', '')}”。建议重点回看关键圈前后的控位、变速和线路选择。",
+                },
+                {
+                    "title": "训练重点",
+                    "body": self._distance_training_advice(distance, grade_code, value_lang),
+                },
+            ]
+        if fast_q25 is not None and total <= float(fast_q25):
+            gap = f"The calculated total {total_display} is inside this {gender_text} {distance} fast-quartile reference band."
+        elif median is not None and total <= float(median):
+            gap = f"The calculated total {total_display} is faster than this {gender_text} {distance} median reference."
         else:
-            notes.append(f"Current profile reads as {grade}, with {self._adv_label(adv, value_lang)} and {self._final_label(final, value_lang)}.")
-            if adv >= 0.7:
-                notes.append("Advancement signal is strong; keep the current structure and sharpen the details.")
-            elif adv >= 0.45:
-                notes.append("Advancement is in the middle band; focus on position control and the key lap.")
-            else:
-                notes.append("Advancement looks weak; check the start, lane control, and mid-late execution first.")
-            if final >= 0.5:
-                notes.append("Final-entry path is open enough for a more aggressive race plan.")
-            else:
-                notes.append("Final-entry path is still unstable; protect repeatable execution before risky moves.")
-            if risk == "High risk":
-                notes.append("Risk is elevated; review contact, rhythm breaks, lane changes, and data quality.")
-            if "Fast-start" in rhythm:
-                notes.append("The race opens quickly, so avoid emptying the tank in the first two laps.")
-            elif "Late" in rhythm:
-                notes.append("This profile suits a late push, so keep position first and press after the key lap.")
-            elif "Steady" in rhythm or "Balanced" in rhythm:
-                notes.append("The rhythm is stable, so a fixed-pace plan should work well here.")
-            elif "risk" in rhythm.lower():
-                notes.append("The pace is unstable, so fix rhythm and line cleanliness before adding speed.")
-            if "fade" in rhythm.lower():
-                notes.append("The opening is strong but the finish fades, so smooth the first half instead of forcing it.")
-            if "chase" in rhythm.lower():
-                notes.append("This is a chasing profile, so keep the gap manageable until the final decision point.")
-            notes.append(f"Current tactical style: {style}. Turning lap: {key_lap}.")
-            notes.append(f"This is a post-race {distance} reference and should be combined with video and coach judgement.")
+            gap = f"The calculated total {total_display} is slower than this {gender_text} {distance} median reference."
+        return [
+            {"title": "Gender-specific model", "body": f"This run uses only the {gender_text} {distance} model and compares the athlete with the same-gender reference group."},
+            {"title": "Performance gap", "body": f"{gap} Predicted grade: {row.get('grade', '')}; advancement reference: {row.get('advancement_reference', '')}."},
+            {"title": "Segments", "body": f"Key lap: {row.get('key_lap', '')}; rhythm: {row.get('rhythm_type', '')}; tactical style: {row.get('tactical_style', '')}."},
+            {"title": "Training focus", "body": self._distance_training_advice(distance, grade_code, value_lang)},
+        ]
 
-        return notes
+    @staticmethod
+    def _distance_training_advice(distance: str, grade_code: int, value_lang: str) -> str:
+        if value_lang == "zh":
+            base = {
+                "500m": "500m优先看起速、首弯位置、前两圈消耗和末圈转换。",
+                "1000m": "1000m优先看中段控位、6-8圈速度保持和最后两圈冲刺储备。",
+                "1500m": "1500m优先看前中后段节奏分层、中段省力和10圈后的后程能力。",
+            }[distance]
+            return base + (" 当前等级偏高，训练重点可放在稳定复现。" if grade_code >= 2 else " 当前仍有提升空间，先把节奏稳定和关键圈执行做扎实。")
+        base = {
+            "500m": "For 500m, watch the start, first-turn position, early cost, and final-lap conversion.",
+            "1000m": "For 1000m, watch mid-race position control, lap 6-8 speed hold, and sprint reserve.",
+            "1500m": "For 1500m, watch pace layering, mid-race energy saving, and late-race capacity.",
+        }[distance]
+        return base + (" The current grade is strong, so focus on repeatability." if grade_code >= 2 else " Build rhythm stability and key-lap execution first.")
+
+    def _grade_label(self, value: int, value_lang: str) -> str:
+        return (GRADE_ZH if self._lang(value_lang) == "zh" else GRADE_EN).get(int(value), str(value))
+
+    def _style_label(self, code: str, value_lang: str) -> str:
+        labels = STYLE_ZH if self._lang(value_lang) == "zh" else STYLE_EN
+        return labels.get(code, code.replace("_", " ").title())
+
+    def _rhythm_label(self, distance: str, cluster: int, value_lang: str) -> str:
+        return RHYTHM_LABELS.get(distance, {}).get(int(cluster), {}).get(self._lang(value_lang), f"Cluster {cluster}")
+
+    def _round_label(self, value: int, value_lang: str) -> str:
+        return ROUND_LABELS.get(self._lang(value_lang), {}).get(int(value), str(value))
+
+    def _risk_label(self, code: str, value_lang: str) -> str:
+        return RISK_LABELS.get(self._lang(value_lang), {}).get(code, code)
+
+    def _adv_label(self, probability: float, value_lang: str) -> str:
+        return ADV_LABELS[self._lang(value_lang)][1 if probability >= 0.5 else 0]
+
+    def _final_label(self, probability: float, value_lang: str) -> str:
+        return FINAL_LABELS[self._lang(value_lang)][1 if probability >= 0.5 else 0]
+
+    def _feature_label(self, feature: str, value_lang: str) -> str:
+        return FEATURE_LABELS.get(feature, {}).get(self._lang(value_lang), feature.replace("_", " "))
 
     @staticmethod
     def _positive_or_winning_probability(model: Any, X: pd.DataFrame, pred: np.ndarray) -> np.ndarray:

@@ -1,6 +1,0 @@
-﻿sample_id,athlete_name,distance,round,qual_code,official_total_time,reconstructed_total_time,lap1_time,lap2_time,lap3_time,lap4_time,lap5_time,lap1_position,lap2_position,lap3_position,lap4_position,lap5_position
-500m_000000,Marianne St-Gelais,500m,Heats,q,43.815,43.81,7.34,9.43,8.88,9.03,9.13,1.0,1.0,1.0,1.0,1.0
-500m_000001,Yutong Han,500m,Heats,q,43.877,43.87,7.69,9.56,8.9,8.82,8.9,3.0,3.0,2.0,2.0,2.0
-500m_000002,Selma Poutsma,500m,Heats,,44.978,44.96999999999999,7.88,9.5,9.13,9.09,9.37,4.0,4.0,3.0,3.0,3.0
-500m_000003,Sumire Kikuchi,500m,Heats,,45.642,45.64,7.54,9.63,9.36,9.43,9.68,2.0,2.0,4.0,4.0,4.0
-500m_000004,Kamila SELLIER,500m,Heats,,48.454,48.449999999999996,7.93,10.11,9.83,10.14,10.44,5.0,5.0,5.0,5.0,5.0

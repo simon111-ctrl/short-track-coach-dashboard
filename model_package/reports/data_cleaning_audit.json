@@ -1,0 +1,119 @@
+{
+  "500m": {
+    "distance": "500m",
+    "source_file": "C:\\Users\\Administrator\\Documents\\数据爬取\\output\\gender_fixeddata\\short_track_500m_gender_fixed.xlsx",
+    "raw_rows": 12756,
+    "rows_removed_missing_any_lap_time_or_position": 2640,
+    "rows_removed_missing_or_unrecognized_gender": 0,
+    "complete_lap_rows": 10116,
+    "gender_missing_raw": 0,
+    "gender_unrecognized_raw": 0,
+    "gender_distribution_raw": {
+      "Man": 7355,
+      "Woman": 5401
+    },
+    "gender_distribution_clean": {
+      "male": 5838,
+      "female": 4278
+    },
+    "official_total_missing_but_reconstructed": 89,
+    "timing_inconsistent_gt_0_10s": 4,
+    "qual_distribution": {
+      "(blank)": 5195,
+      "q": 4894,
+      "ADVA": 25,
+      "ADVB": 2
+    },
+    "special_adv_distribution": {
+      "ADVA": 25,
+      "ADVB": 2
+    },
+    "round_distribution": {
+      "Quarterfinals": 2826,
+      "Heats": 2456,
+      "Preliminaries": 2237,
+      "Semifinals": 1458,
+      "Finals": 650,
+      "Rep. Heats": 379,
+      "Ranking Finals": 110
+    }
+  },
+  "1000m": {
+    "distance": "1000m",
+    "source_file": "C:\\Users\\Administrator\\Documents\\数据爬取\\output\\gender_fixeddata\\short_track_1000m_gender_fixed.xlsx",
+    "raw_rows": 12704,
+    "rows_removed_missing_any_lap_time_or_position": 2708,
+    "rows_removed_missing_or_unrecognized_gender": 0,
+    "complete_lap_rows": 9996,
+    "gender_missing_raw": 0,
+    "gender_unrecognized_raw": 0,
+    "gender_distribution_raw": {
+      "Man": 7270,
+      "Woman": 5434
+    },
+    "gender_distribution_clean": {
+      "male": 5704,
+      "female": 4292
+    },
+    "official_total_missing_but_reconstructed": 181,
+    "timing_inconsistent_gt_0_10s": 1,
+    "qual_distribution": {
+      "(blank)": 5256,
+      "q": 4707,
+      "ADVA": 31,
+      "ADVB": 2
+    },
+    "special_adv_distribution": {
+      "ADVA": 31,
+      "ADVB": 2
+    },
+    "round_distribution": {
+      "Quarterfinals": 2814,
+      "Heats": 2532,
+      "Preliminaries": 1976,
+      "Semifinals": 1494,
+      "Finals": 694,
+      "Rep. Heats": 388,
+      "Ranking Finals": 98
+    }
+  },
+  "1500m": {
+    "distance": "1500m",
+    "source_file": "C:\\Users\\Administrator\\Documents\\数据爬取\\output\\gender_fixeddata\\short_track_1500m_gender_fixed.xlsx",
+    "raw_rows": 11624,
+    "rows_removed_missing_any_lap_time_or_position": 2611,
+    "rows_removed_missing_or_unrecognized_gender": 0,
+    "complete_lap_rows": 9013,
+    "gender_missing_raw": 0,
+    "gender_unrecognized_raw": 0,
+    "gender_distribution_raw": {
+      "Man": 6690,
+      "Woman": 4934
+    },
+    "gender_distribution_clean": {
+      "male": 5228,
+      "female": 3785
+    },
+    "official_total_missing_but_reconstructed": 143,
+    "timing_inconsistent_gt_0_10s": 2,
+    "qual_distribution": {
+      "(blank)": 5249,
+      "q": 3676,
+      "ADVA": 57,
+      "ADVB": 31
+    },
+    "special_adv_distribution": {
+      "ADVA": 57,
+      "ADVB": 31
+    },
+    "round_distribution": {
+      "Quarterfinals": 4050,
+      "Semifinals": 2372,
+      "Heats": 1183,
+      "Finals": 1100,
+      "Rep. Heats": 167,
+      "Ranking Finals": 116,
+      "Preliminaries": 25
+    }
+  }
+}

@@ -1,14 +1,18 @@
 # Input Fields
 
-Required raw fields:
-- 姓名: athlete name, used only for grouped validation and audit.
-- 总成绩: official total time. Can be blank when all lap times are present; then it is reconstructed from lap sums.
-- qual: official qualification code used to define advancement labels.
-- 轮次: race round, used for excluding Final A/B from advancement training and for audit.
-- 第N圈成绩 and 第N圈位置: all lap time and lap position fields are required for the distance.
-- 赛季, 比赛名称, 比赛地点, 比赛日期, 项目, 国家/地区, source_url: metadata for audit, time validation, and traceability.
+The web app uses gender-specific short-track models. Required user-facing inputs are:
+
+- `gender`: required model selector. Allowed values are `male` and `female`; the UI also accepts 男 / 女 / Male / Female / Men / Women.
+- `distance`: required model selector. Allowed values are `500m`, `1000m`, and `1500m`.
+- `official_total_time`: optional. If blank, the app uses the sum of lap times.
+- `lapN_time`: required for every lap in the selected distance. The app accepts `mm:ss:SSS`, `mm:ss`, `m:ss`, `ss`, `ss.sss`, or pure seconds.
+- `lapN_position`: required for every lap in the selected distance.
+- `athlete_name`, `round`, `qual_code`: optional metadata for display and audit. These are not sent as model features.
 
 Distance-specific lap counts:
-- 500m: laps 1-5.
-- 1000m: laps 1-9.
-- 1500m: laps 1-14.
+
+- `500m`: laps 1-5
+- `1000m`: laps 1-9
+- `1500m`: laps 1-14
+
+The model input DataFrame is built after feature engineering. Exact feature names and order come from each selected `models/<gender>/<distance>/<task>/features.json`.
